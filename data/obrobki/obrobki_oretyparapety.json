@@ -1,0 +1,10 @@
+{
+    "Cięcie po skosie": { "jednostka": "ilosc", "cena": 50 },
+    "Otwór nablatowy": { "jednostka": "ilosc", "cena": 500 },
+    "Otwór bateria": { "jednostka": "ilosc", "cena": 100 },
+    "Otwór syfon": { "jednostka": "ilosc", "cena": 200 },
+    "Wycięcie narożnika": { "jednostka": "ilosc", "cena": 40 },
+    "Wycięcie narożnika (poler)": { "jednostka": "ilosc", "cena": 80 },
+    "Podpoler": { "jednostka": "mb", "cena": 60 }
+  }
+  

@@ -6,7 +6,8 @@
         "iostream": "cpp",
         "ostream": "cpp",
         "vector": "cpp",
-        "map": "cpp"
+        "map": "cpp",
+        "filesystem": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

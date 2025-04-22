@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista produktów</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+</head>
+
+<body>
+    <!-- Obraz na górze strony -->
+    <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" style="width:100%; height:auto;">
+
+    <div class="tresc_strony">
+    <h1>Uzupełnij dane klienta</h1>
+    <form action="/aktualizuj_klienta" method="POST">
+        <label for="imie">Imię i nazwisko</label><br>
+        <input type="text" id="imie" name="imie" placeholder="{{ klient.imie }}" required style="width: 475px;"><br>
+    
+        <label for="adres">Adres</label><br>
+        <input type="text" id="adres" name="adres" placeholder="{{ klient.adres }}" required style="width: 475px;"><br>
+    
+        <label for="nr_tel">Numer telefonu</label><br>
+        <input type="text" id="nr_tel" name="nr_tel" placeholder="{{ klient.nr_tel }}" required style="width: 475px;"><br><br>
+    
+        <h3>Ważność wyceny</h3>
+        <label for="dni">Dni:</label>
+        <input type="number" id="dni" name="dni" value="0" min="0" style="width: 60px;">
+        <label for="tygodnie">Tygodnie:</label>
+        <input type="number" id="tygodnie" name="tygodnie" value="0" min="0" style="width: 60px;">
+        <label for="miesiace">Miesiące:</label>
+        <input type="number" id="miesiace" name="miesiace" value="0" min="0" style="width: 60px;">
+        <br><br>
+
+        <button type="submit">Zaktualizuj klienta</button>
+    </form>
+    {% if zamowienie.lista_produktow %}
+    <h1>Lista produktów</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Producent</th>
+                <th>Materiał</th>
+                <th>Typ</th>
+                <th>Długość [cm]</th>
+                <th>Szerokość [cm]</th>
+                <th>Grubość [cm]</th>
+                <th>Ilość</th>
+                <th>Cena [zł]</th>
+                <th>Obróbka</th>
+                <th>Cena obróbek [zł]</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            {% for produkt in zamowienie.lista_produktow %}
+            <tr>
+                <td>{{ produkt.producent.nazwa }}</td>
+                <td>{{ produkt.material }}</td>
+                <td>{{ produkt.typ }}</td>
+                <td>{{ produkt.dlugosc }}</td>
+                <td>{{ produkt.szerokosc }}</td>
+                <td>{{ produkt.grubosc }}</td>
+                <td>{{ produkt.ilosc }}</td>
+                <td>{{ produkt.cena() }}</td>
+                <td>{{ produkt.obrobki | join(', ') }}</td>
+                <td>{{ produkt.cena_obrobek() }}</td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <p>Cena produktów: {{ zamowienie.laczna_cena() }}</p>
+    {% endif %}
+
+    <h1>Usługi</h1>
+    <form method="post" action="/uslugi">
+        <label>
+            <input type="checkbox" name="pomiar" {% if usluga_pomiar %}checked{% endif %}>
+            Pomiar
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" name="transport" {% if usluga_transport %}checked{% endif %}>
+            Transport
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" name="montaz" {% if usluga_montaz %}checked{% endif %}>
+            Montaż
+        </label>
+        <br>
+        <br>
+        <label for="cena_u">Cena usługi</label><br>
+        <input type="number" id="cena_u" name="cena_u" value="{{ cena_uslugi }}" required style="width: 475px;">
+        <br>
+        <br>
+        <button type="submit">Zaktualizuj usługi</button>
+    </form>
+
+
+    <p><strong>Łączna cena:</strong> {{ laczna_cena_z_uslugami }} zł</p>
+
+    <br>
+    <div class="przerwa_miedzy_przyciskami">
+        <button onclick="window.location.href='/dodaj_produkt';">Dodaj produkty</button>
+        <button onclick="window.location.href='/pdf';">Wygeneruj Wycenę</button>
+    </div>
+    <br><br>
+</div>
+</body>
+</html>

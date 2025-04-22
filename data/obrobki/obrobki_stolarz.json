@@ -1,0 +1,11 @@
+{
+    "Otwór": { "jednostka": "ilosc", "cena": 100 },
+    "Lakier": { "jednostka": "procent", "cena": 0.3, "typ": "od_produktu" },
+    "Kształt koła": { "jednostka": "ilosc", "cena": 450 },
+    "Frez pod okno": { "jednostka": "mb", "cena": 10 },
+    "Nieregularne kształty": { "jednostka": "procent", "cena": 0.3, "typ": "od_produktu" },
+    "Podklejka": { "jednostka": "mb", "cena": 150 },
+    "Frez na led": { "jednostka": "mb", "cena": 15 },
+    "Bateria": { "jednostka": "ilosc", "cena": 60 }
+}
+  

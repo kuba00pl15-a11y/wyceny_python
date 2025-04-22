@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Dodaj produkt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+
+    <!-- Obraz na górze strony -->
+    <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" style="width:100%; height:auto;">
+
+    <h1>Dodaj produkt do zamówienia</h1>
+
+    <form action="{{ url_for('dodaj_produkt') }}" method="post">
+        <table>
+            <thead>
+                <tr>
+                    <th>Producent</th>
+                    <th>Materiał</th>
+                    <th>Typ</th>
+                    <th>Długość (cm)</th>
+                    <th>Szerokość (cm)</th>
+                    <th>Grubość (cm)</th>
+                    <th>Ilość</th>
+                    <th>Obróbka</th> </tr>
+                </tr>
+            </thead>
+            <tbody id="productTable">
+                {% for produkt in lista_produktow %}
+                <tr data-row-id="{{ loop.index0 }}">
+                    <td>
+                        <select name="producent_{{ loop.index0 }}" required onchange="updateMaterials(this)">
+                            <option value="Stolarz" {% if produkt.producent.nazwa == "Stolarz" %}selected{% endif %}>Stolarz</option>
+                            <option value="O rety parapety" {% if produkt.producent.nazwa == "O rety parapety" %}selected{% endif %}>O rety parapety</option>
+                            <option value="Olgran" {% if produkt.producent.nazwa == "Olgran" %}selected{% endif %}>Olgran</option>
+                            <option value="Imperial" {% if produkt.producent.nazwa == "Imperial" %}selected{% endif %}>Imperial</option>
+                            <option value="Forma system" {% if produkt.producent.nazwa == "Forma system" %}selected{% endif %}>Forma system</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" id="material_{{ loop.index0 }}" name="material_{{ loop.index0 }}" list="materialsList{{ loop.index0 }}" oninput="filterMaterials(this, 'materialsList{{ loop.index0 }}')" required value="{{ produkt.material }}">
+                        <datalist id="materialsList{{ loop.index0 }}"></datalist>
+                    </td>
+                    <td>
+                        <select name="typ_{{ loop.index0 }}" required>
+                            <option value="{{ produkt.typ }}" selected>{{ produkt.typ }}</option>
+                        </select>
+                    </td>
+                    <td><input type="text" name="dlugosc_{{ loop.index0 }}" value="{{ produkt.dlugosc }}" required></td>
+                    <td><input type="text" name="szerokosc_{{ loop.index0 }}" value="{{ produkt.szerokosc }}" required></td>
+                    <td>
+                        <select name="grubosc_{{ loop.index0 }}" required>
+                            <option value="{{ produkt.grubosc }}" selected>{{ produkt.grubosc }}</option>
+                        </select>
+                    </td>
+                    <td><input type="text" name="ilosc_{{ loop.index0 }}" value="{{ produkt.ilosc }}" required></td>
+                    <td><button type="button" class="addObrobka" data-row-id="{{ loop.index0 }}">Dodaj obróbkę</button></td>
+                    <input type="hidden" name="obrobki_{{ loop.index0 }}" value="{{ produkt.obrobki | join(', ') }}">
+                    <td><button type="button" class="removeRow">Usuń</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <button type="button" id="addRow">Dodaj produkt</button>
+        <br><br>
+        <button type="submit">Zatwierdź zamówienie</button>
+    </form>
+    
+    <div id="obrobkaModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black; min-width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000;">
+        <div class="modal-close" id="closeObrobkaModal">&times;</div>
+        <h2>Dodaj obróbkę</h2>
+        <div id="obrobkaList"></div>
+        <button id="zapiszObrobki">Zapisz</button>
+    </div>
+
+    <script>
+        
+        {# let zamowienie = {{ zamowienie if zamowienie else "''" }}; #}
+        {# console.log(zamowienie) #}
+        const materials = {
+            "O rety parapety": [
+                "Ariston", "Botticino", "Baltic Grey", "Beige Marfil", "Bianco Ghiaccio", "Bianco Neve", "Breccia Aurora", "Calacatta",
+                "Ceniza Pearl", "Madra Perla", "Misty White", "Nero Portoro", "Perlato Appia", "Polare", "Rosa Del Garda", "Royal Beige"
+            ],
+            "Olgran": [
+                "Super White", "Balmoral", "Bianco", "Strzeblów", "Strzegom", "Strzelin", "Bohus Grey", "Red", "Braz Królewski",
+                "Classic Brown", "Dark Grey", "Impala Marikana Dark", "Infinity", "Kashmir", "Colonial", "Valley", "Winter",
+                "Coffee Brown", "Magma Gold", "Titanium Gold", "Nero Assoluto", "Monumental", "New Dark Grey", "Oscuro", "Titanium",
+                "Forest", "Silver Paradiso", "Premium Black", "Premium Black Satyna", "Saida", "Santorini", "SpringFalls", "Star Gate",
+                "Steel Grey Lappato", "Tan Brown", "Tołkowski", "Vanga", "Wiscount White", "Bianco Carrara", "Brecia Sarda", "Crema Marfil",
+                "New Marfil", "Brilliant Black", "Calacatta Olympos", "Crystal Anthracite", "Crystal PolarWhite", "Gobi Grey", "Noble Carrara",
+                "Noble Quarzite", "Noble Concrete Grey", "Adamantium", "Artemis", "Elysium", "Polaris Gold", "Ocean"
+            ],
+            "Imperial": [
+                "Andromeda White", "Nero Antico", "Nero Satyna", "Nero Via Lactea", "Star Galaxy", "Steel Grey", "Altamonte", "Glencoe",
+                "Bronze Coast", "Ambiente Light", "Calacatta Silva", "Crystal Absolute White", "Imagine Grey", "Noble Areti Bianco",
+                "Noble Supreme White", "Noble Pro Frost", "Taj Mahal"
+            ],
+            "Stolarz": [
+                "Dąb"
+            ],
+            "Forma system": [
+                "Elegance Eco Nev", "Gobi Grey", "Gobi Black", "Crystal Royal", "Taurus Black", "Crystal Diamond", "Starlight Black",
+                "Crystal Absolute White", "Brilliant White", "Crystal Polar White", "Noble Arco", "Noble Carrara", "Noble Concrete Grey",
+                "Noble Ivory White", "Noble Pietra Grey", "Noble Pro Frost", "Noble Quartzite", "Noble Areti", "Noble Imperial Grey",
+                "Noble Supreme White", "Noble Villa", "Noble Pearl Delta", "Ambiente Light", "Crystal Calacatta Silva", "Mystery White",
+                "Blanco Maple", "Coral Clay", "Marengo", "Negro Tebas", "Lagoon", "Desert Silver", "Snowy Ibiza", "Eternal Statuario",
+                "Blanco Zeus", "Eternal Marquina", "Eternal Calacatta Gold", "Ethereal Glow", "Charcoal Soapstone", "Lusso", "Pietra",
+                "Negro Tebas Suede", "Desert Silver Suede", "Coral Clay Suede", "Eternal Serena Suede", "Lime Delight Suede", "Poblenou Suede",
+                "Seaport Suede", "Blanco Zeus Suede", "Charcoal Soapstone Suede", "Ethereal Glow Suede", "Brasil", "Emerald Dream", "Marmi Aava",
+                "Negro Style", "India Pearl", "Arctic Storm", "Danae", "Fossil", "Kreta", "Sirius", "Domoos", "Grafite", "Grigio", "Kelya", "Kira",
+                "Laos", "Lunar", "Sabbia", "Soke", "Trilium", "Zenith", "Aura 22", "Bromo", "Entzo", "Kairos", "Laurent", "Nilium", "Remf",
+                "Albarium", "Arga Xgloss", "Bergen Xgloss", "Helena Xgloss", "Taga", "Reverie", "Somnia", "Awake Xgloss", "Khalo Xgloss",
+                "Calacatta Lincoln Gold", "Nero Marquina Extra Bocciardata", "Diamond Cream", "Fokos sale", "Calacatta michelangelo soft tougch",
+                "Noir desir", "Calacatta black bocciaradto", "Pietra grey", "Collection Bianco Assoluto MAT", "Collection Nero Assoluto MAT",
+                "Pietra di Piombo silk", "Krater Riv.", "Layla slate", "Pietra Grey Silk", "Mar del Plate slate", "Abu Dhabi silk",
+                "Calacatta Lux ultra.", "Layla polished", "Grande Marble Look Altissimo", "Grande Marble Look Imperiale", "Grande Marble Look Golden White",
+                "Grande Stone Look Basaltina", "Grande Concreate Look Smoke", "Grande Concreate Look Graphite", "Grande Marble Look Statuario"
+            ]
+        };
+
+        const thicknesses = {};
+
+        for (const company in materials) {
+            materials[company].forEach(material => {
+                let thickness;
+
+                if (company === "O rety parapety") {
+                    thickness = [2, 3];
+                } else if (company === "Olgran" || company === "Imperial") {
+                    thickness = [2, 3];
+                } else if (company === "Stolarz") {
+                    thickness = [3, 4, 5, 6];
+                } else if (company === "Forma system") {
+                    thickness = [1.2, 2]
+                }
+
+                if (!thicknesses[material]) {
+                    thicknesses[material] = {};
+                }
+
+                thicknesses[material][company] = thickness;
+            });
+        }
+
+        function updateThickness(row) {
+            const producent = row.querySelector("select[name^='producent']").value;
+            const material = row.querySelector("input[name^='material']").value;
+            const thicknessSelect = row.querySelector("select[name^='grubosc']");
+
+            const currentValue = thicknessSelect.value; // Zapamiętaj obecnie wybraną wartość
+            thicknessSelect.innerHTML = ""; // Wyczyść opcje
+
+            if (thicknesses[material] && thicknesses[material][producent]) {
+                thicknesses[material][producent].forEach(thickness => {
+                    const option = document.createElement("option");
+                    option.value = thickness;
+                    option.textContent = thickness;
+                    thicknessSelect.appendChild(option);
+                });
+            }
+
+            // Przywróć poprzednio wybraną wartość, jeśli nadal jest dostępna
+            if ([...thicknessSelect.options].some(option => option.value === currentValue)) {
+                thicknessSelect.value = currentValue;
+            }
+        }
+
+
+        document.addEventListener("input", function (event) {
+            if (event.target.name.startsWith("material")) {
+                const row = event.target.closest("tr");
+                updateThickness(row);
+            }
+        });
+
+        function updateMaterials(selectElement, zeruj = true) {
+            const row = selectElement.closest("tr");
+            const producent = selectElement.value;
+            const materialInput = row.querySelector("input[name^='material']");
+            const materialList = row.querySelector("datalist");
+            const datalistId = materialList.id; // Unikalne ID dla tego wiersza
+
+            if(zeruj) {
+                materialInput.value = ""; // Reset materiału na pusty tekst
+            }
+            materialList.innerHTML = ""; // Wyczyść listę materiałów
+
+            if (producent === "Stolarz") {
+                // Dąb dla Stolarza
+                const option = document.createElement("option");
+                option.value = "Dąb";
+                option.textContent = "Dąb";
+                materialList.appendChild(option);
+                materialInput.value = "Dąb"; // Ustawienie domyślnego materiału na Dąb
+                materialInput.readOnly = true; // Zablokuj pole w przypadku Stolarza
+            } else {
+                materialInput.readOnly = false;
+                if (producent in materials) {
+                    materials[producent].forEach(function (material) {
+                        const option = document.createElement("option");
+                        option.value = material;
+                        option.textContent = material;
+                        materialList.appendChild(option);
+                    });
+                }
+            }
+
+            const typeSelect = row.querySelector("select[name^='typ']");
+            typeSelect.innerHTML = ""; // Wyczyść opcje typów
+            if (producent === "O rety parapety") {
+                // Tylko "Parapet" dla "O rety parapety"
+                const option = document.createElement("option");
+                option.value = "Parapet";
+                option.textContent = "Parapet";
+                typeSelect.appendChild(option);
+            } else {
+                // Dla innych producentów opcje "Blat" i "Parapet"
+                ["Parapet", "Blat"].forEach(function (type) {
+                    const option = document.createElement("option");
+                    option.value = type;
+                    option.textContent = type; // Kapitalizacja
+                    typeSelect.appendChild(option);
+                });
+            }
+            updateThickness(row);
+        }
+
+        function filterMaterials(inputElement, datalistId) {
+            const filterValue = inputElement.value.toLowerCase();
+            const datalist = document.getElementById(datalistId); // Znajdź datalist według unikalnego ID
+            const options = datalist.querySelectorAll("option");
+            options.forEach(option => {
+                const optionText = option.value.toLowerCase();
+                option.style.display = optionText.includes(filterValue) ? "block" : "none";
+            });
+        }
+
+        document.getElementById("addRow").addEventListener("click", function () {
+            const table = document.getElementById("productTable");
+            const rowCount = table.rows.length;
+            const newRow = table.insertRow();
+            newRow.dataset.rowId = table.rows.length; // Przypisz unikalny identyfikator
+
+            const datalistId = newRow.dataset.rowId; // Unikalne ID dla nowego wiersza
+
+            newRow.innerHTML = `
+                <td>
+                    <select name="producent_${datalistId}" required onchange="updateMaterials(this)">
+                        <option value="Stolarz">Stolarz</option>
+                        <option value="O rety parapety">O rety parapety</option>
+                        <option value="Olgran">Olgran</option>
+                        <option value="Imperial">Imperial</option>
+                        <option value="Forma system">Forma system</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" name="material_${datalistId}" list="materialsList_${datalistId}" oninput="filterMaterials(this, 'materialsList_${datalistId}')" required>
+                    <datalist id="materialsList_${datalistId}"></datalist>
+                </td>
+                <td><select name="typ_${datalistId}" required></select></td>
+                <td><input type="text" name="dlugosc_${datalistId}" value="0" required></td>
+                <td><input type="text" name="szerokosc_${datalistId}" value="0" required></td>
+                <td>
+                    <select name="grubosc_${datalistId}" required>
+                    </select>
+                </td>
+                <td><input type="text" name="ilosc_${datalistId}" value="1" required></td>
+                <td><button type="button" class="addObrobka" data-row-id="${datalistId}">Dodaj obróbkę</button></td>
+                <td><button type="button" class="removeRow">Usuń</button></td>
+            `; 
+
+            if (rowCount > 0) {
+                const lastRow = table.rows[rowCount - 1]; // Pobranie przedostatniego wiersza
+
+                // Przepisanie wartości dla "producent"
+                const prevProducent = lastRow.querySelector("select[name^='producent']");
+                const newProducent = newRow.querySelector("select[name^='producent']");
+                newProducent.value = prevProducent.value;
+
+                // Przepisanie wartości dla "material"
+                const prevMaterial = lastRow.querySelector(`input[name^='material']`);
+                const newMaterial = newRow.querySelector(`input[name^='material']`);
+                newMaterial.value = prevMaterial.value;
+
+                updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
+
+                // Przepisanie wartości dla "typ"
+                const prevTyp = lastRow.querySelector("select[name^='typ']");
+                const newTyp = newRow.querySelector("select[name^='typ']");
+                [...newTyp.options].forEach(option => {
+                    option.selected = option.value === prevTyp.value;
+                });
+
+                // Przepisanie wartości dla "grubosc"
+                const prevGrubosc = lastRow.querySelector("select[name^='grubosc']");
+                const newGrubosc = newRow.querySelector("select[name^='grubosc']");
+                
+                [...newGrubosc.options].forEach(option => {
+                    option.selected = option.value === prevGrubosc.value;
+                });
+
+            } else {
+                // Przepisanie wartości dla "producent"
+                const newProducent = newRow.querySelector("select[name^='producent']");
+                newProducent.value = "Stolarz";
+
+                // Przepisanie wartości dla "material"
+                const newMaterial = newRow.querySelector(`input[name^='material']`);
+                newMaterial.value = "Dąb";
+
+
+                updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
+
+            }
+        });
+
+        document.addEventListener("click", function(event) {
+            if (event.target.classList.contains("removeRow")) {
+                event.target.closest("tr").remove();
+            }
+        });
+
+        // // Uruchomienie aktualizacji materiałów na starcie
+        // window.onload = function () {
+        //     const firstRowProducerSelect = document.querySelector("#productTable tr:first-child select[name='producent']");
+        //     if (firstRowProducerSelect) {
+        //         updateMaterials(firstRowProducerSelect);
+        //     }
+        // };
+        window.onload = function () {
+            document.querySelectorAll("#productTable tr").forEach(row => updateThickness(row));
+        };
+
+
+        const obrobkiMap = {{ obrobki_data | tojson | safe }};
+        let currentObrobkaRowId; // Przechowuje ID aktualnie edytowanego wiersza
+
+        // Obsługa kliknięcia przycisku dodawania obróbki
+        document.addEventListener("click", function(event) {
+            if (event.target.classList.contains("addObrobka")) {
+                currentObrobkaRowId = event.target.dataset.rowId;
+                openObrobkaModal(currentObrobkaRowId);
+            }
+        });
+
+        const jednostkiObrobek = {};
+
+        for (const [producent, obrobki] of Object.entries(obrobkiMap)) {
+            for (const [nazwa, dane] of Object.entries(obrobki)) {
+                jednostkiObrobek[nazwa] = dane.jednostka;
+            }
+        }
+
+        function openObrobkaModal(rowId) {
+            const row = document.querySelector(`tr[data-row-id='${rowId}']`);
+            let producent = row.querySelector("select[name^='producent']").value.toLowerCase().replace(/\s+/g, '');
+            console.log(producent)       
+
+            const obrobkaList = document.getElementById("obrobkaList");
+            obrobkaList.innerHTML = ""; // Wyczyść listę obróbek
+
+            const hiddenInput = row.querySelector("input[name^='obrobki_']");
+            const selectedObrobki = hiddenInput ? hiddenInput.value.split(", ") : [];
+
+            const createCategorySection = (title, obrobki) => {
+                const categoryTitle = document.createElement("h4");
+                categoryTitle.textContent = title;
+                obrobkaList.appendChild(categoryTitle);
+
+                obrobki.forEach(obrobka => {
+                    if (!(obrobka in obrobkiMap[producent])) return;
+
+                    const div = document.createElement("div");
+                    div.style.display = "flex";
+                    div.style.alignItems = "center";
+                    div.style.marginBottom = "5px";
+
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.value = obrobka;
+                    checkbox.id = `obrobka_${obrobka}`;
+                    if (selectedObrobki.includes(obrobka)) checkbox.checked = true;
+
+                    const label = document.createElement("label");
+                    label.htmlFor = checkbox.id;
+                    label.textContent = obrobka;
+                    label.style.marginLeft = "5px";
+                    label.style.flex = "1";
+
+                    const ilosc = parseFloat(row.querySelector("input[name^='ilosc']").value) || 1;
+                    const dlugosc = parseFloat(row.querySelector("input[name^='dlugosc']").value) || 0;
+                    const szerokosc = parseFloat(row.querySelector("input[name^='szerokosc']").value) || 0;
+
+                    const cena = policzCeneObrobki(obrobka, producent, ilosc, dlugosc, szerokosc);
+
+                    const examplePrice = document.createElement("span");
+                    examplePrice.style.fontSize = "0.9em";
+                    examplePrice.style.color = "gray";
+                    examplePrice.style.marginLeft = "10px";
+                    examplePrice.textContent = cena !== null ? `~ ${cena} zł` : "brak danych";
+
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+
+                    // Pokaż input tylko jeśli obróbka liczona na sztuki
+                    if (jednostkiObrobek[obrobka] === "ilosc") {
+                        const quantity = document.createElement("input");
+                        quantity.type = "number";
+                        quantity.min = 1;
+                        quantity.value = 1;
+                        quantity.style.width = "40px";
+                        quantity.style.marginLeft = "10px";
+
+                        // Nasłuchiwanie na zmianę ilości
+                        quantity.addEventListener("input", () => {
+                            const aktualnaIlosc = parseFloat(quantity.value) || 1;
+                            const nowaCena = policzCeneObrobki(obrobka, producent, aktualnaIlosc, dlugosc, szerokosc);
+                            examplePrice.textContent = nowaCena !== null ? `~ ${nowaCena} zł` : "brak danych";
+                        });
+
+                        div.appendChild(quantity);
+                    }
+
+                    div.appendChild(examplePrice);
+
+                    obrobkaList.appendChild(div);
+                });
+            };
+
+
+            if (obrobkiMap[producent]) {
+                const allObrobki = obrobkiMap[producent];
+
+                if (producent === "stolarz") {
+                    const podstawowe = ["Otwór", "Lakier", "Kształt koła", "Frez pod okno"];
+                    const ponadpodstawowe = Object.keys(allObrobki).filter(o => !podstawowe.includes(o));
+                    console.log(ponadpodstawowe)
+
+
+                    createCategorySection("Obróbka podstawowa", podstawowe);
+                    createCategorySection("Obróbka ponadpodstawowa", ponadpodstawowe);
+
+                } else if (producent === "olgran" || producent === "imperial") {
+                    const otwory = ["Bateria", "Power-port", "Płyta grzewcza", "Zlew podwieszny", "Licowanie płyty", "Wzmocnienie otworu"];
+                    const dodatkiBlaty = ["Ociekacz","Paski na ociekaczu", "Paski na ociekaczu - komplet", "Podklejka z cięciem", "Cięcie 45 ST", "Kaliblator LED", "Impregnacja", "Cieniowanie materiału", "Podpoler", "Szczotkowanie"];
+                    const parapetyBlaty = ["Kapinos", "Zaokrąglenie narożników", "Półwałek", "Ćwierćwałek", "Ćwierćwałek blatowy", "Ćwierćwałek profilowany", "Faza okrągła", "Obróbka prosta", "Cięcie po łuku", "Waterjet cięcie", "Fazowanie płytek"];
+                    const inne = Object.keys(allObrobki).forEach(o => ![...otwory, ...dodatkiBlaty, ...parapetyBlaty].includes(o));
+
+                    createCategorySection("Otwory", otwory);
+                    createCategorySection("Dodatki - blaty", dodatkiBlaty);
+                    createCategorySection("Parapety / blaty obróbka", parapetyBlaty);
+                    if (inne.length) createCategorySection("Inne", inne);
+
+                } else {
+                    // Domyślne bez kategorii
+                    Object.keys(allObrobki).forEach(obrobka => {
+                        const div = document.createElement("div");
+                        div.style.display = "flex";
+                        div.style.alignItems = "center";
+                        div.style.marginBottom = "5px";
+
+                        // checkbox
+                        const checkbox = document.createElement("input");
+                        checkbox.type = "checkbox";
+                        checkbox.value = obrobka;
+                        checkbox.id = `obrobka_${obrobka}`;
+                        if (selectedObrobki.includes(obrobka)) checkbox.checked = true;
+
+                        // etykieta
+                        const label = document.createElement("label");
+                        label.htmlFor = checkbox.id;
+                        label.textContent = obrobka;
+                        label.style.marginLeft = "5px";
+                        label.style.flex = "1";
+
+                        // dane z formularza
+                        const ilosc = parseFloat(row.querySelector("input[name^='ilosc']").value) || 1;
+                        const dlugosc = parseFloat(row.querySelector("input[name^='dlugosc']").value) || 0;
+                        const szerokosc = parseFloat(row.querySelector("input[name^='szerokosc']").value) || 0;
+
+                        const cena = policzCeneObrobki(obrobka, producent, ilosc, dlugosc, szerokosc);
+
+                        // pokazanie ceny
+                        const examplePrice = document.createElement("span");
+                        examplePrice.style.fontSize = "0.9em";
+                        examplePrice.style.color = "gray";
+                        examplePrice.style.marginLeft = "10px";
+                        examplePrice.textContent = cena !== null ? `~ ${cena} zł` : "brak danych";
+
+
+                        // ilość sztuk (opcjonalne)
+                        const quantity = document.createElement("input");
+                        quantity.type = "number";
+                        quantity.min = 1;
+                        quantity.value = 1;
+                        quantity.style.width = "40px";
+                        quantity.style.marginLeft = "10px";
+
+                        // dodaj wszystko do diva
+                        div.appendChild(checkbox);
+                        div.appendChild(label);
+                        div.appendChild(quantity);
+                        div.appendChild(examplePrice);
+
+                        // dodaj do modala
+                        obrobkaList.appendChild(div);
+
+                    });
+                }
+            }
+
+             function policzCeneObrobki(obrobka, producent, ilosc, dlugosc, szerokosc) {
+                const dane = obrobkiMap?.[producent]?.[obrobka];
+                if (!dane) return null;
+
+                const mb = dlugosc / 100;
+                const m2 = (dlugosc / 100) * (szerokosc / 100);
+                const jednostka = dane.jednostka;
+                const cena = dane.cena;
+
+                if (dane.typ === "od_produktu") {
+                    const cenaProduktu = 500; // TODO: Zamień na realną wartość jeśli chcesz
+                    return Math.round(cena * cenaProduktu);
+                }
+
+                switch (jednostka) {
+                    case "ilosc": return Math.round(cena * ilosc);
+                    case "mb": return Math.round(cena * mb);
+                    case "m2": return Math.round(cena * m2);
+                    default: return null;
+                }
+            }
+
+            document.getElementById("obrobkaModal").style.display = "block";
+        }
+
+        // Obsługa przycisku zapisu obróbek
+        document.getElementById("zapiszObrobki").addEventListener("click", function () {
+            const selectedObrobki = [];
+
+            // Przechodzimy po wszystkich checkboxach w modalu
+            document.querySelectorAll("#obrobkaList input[type='checkbox']").forEach(checkbox => {
+                if (!checkbox.checked) return;
+
+                const obrobka = checkbox.value;
+                const jednostka = jednostkiObrobek[obrobka] || null;
+
+                let finalValue = obrobka;
+
+                if (jednostka === "ilosc") {
+                    // Spróbuj znaleźć input typu number w tym samym rodzicu co checkbox
+                    const parentDiv = checkbox.closest("div");
+                    const inputIlosc = parentDiv.querySelector("input[type='number']");
+                    const ilosc = inputIlosc ? parseInt(inputIlosc.value) || 1 : 1;
+                    finalValue = `${obrobka}:${ilosc}`;
+                }
+
+                selectedObrobki.push(finalValue);
+            });
+
+            if (currentObrobkaRowId) {
+                const row = document.querySelector(`tr[data-row-id='${currentObrobkaRowId}']`);
+                let hiddenInput = row.querySelector("input[name^='obrobki_']");
+
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement("input");
+                    hiddenInput.type = "hidden";
+                    hiddenInput.name = `obrobki_${currentObrobkaRowId}`;
+                    row.appendChild(hiddenInput);
+                }
+
+                hiddenInput.value = selectedObrobki.join(", ");
+            }
+
+            console.log("Zapisano obróbki:", selectedObrobki);
+            document.getElementById("obrobkaModal").style.display = "none";
+        });
+
+        // Obsługa przycisku anulowania
+        document.getElementById("closeObrobkaModal").addEventListener("click", function () {
+            document.getElementById("obrobkaModal").style.display = "none";
+        });
+
+
+        
+    </script>
+
+    <br>
+    <button onclick="window.location.href='/';">Strona główna</button><br>
+    
+</body>
+</html>
