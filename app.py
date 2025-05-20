@@ -1,9 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, make_response, Response, session, request
+from flask import Flask, render_template, request, redirect, url_for, Response, session, flash
 import math
+from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 import json
-import re
 import os
-from collections import Counter
 
 def wczytaj_ceny_obrobek():
     katalog = r"data\obrobki"
@@ -390,7 +389,7 @@ class Klient:
 klient = Klient()
 # dodaj klienta
 app = Flask(__name__)
-app.secret_key = "klucz"
+app.secret_key = "hfe9hf9wh"
 zamowienie = Zamowienie()
 producenty = {
     "Stolarz": Stolarz,
@@ -400,10 +399,36 @@ producenty = {
     "Forma system": Formasystem
 }
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+users = {
+    'admin': {'password': 'p'}
+}
+
+# Klasa użytkownika
+class User(UserMixin):
+    def __init__(self, username):
+        self.id = username
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id in users:
+        return User(user_id)
+    return None
+
 cena_transportt = ""
 cena_montazuu = ""
 cena_pomiaruu = ""
 cena_ppmmtt = ""
+
+@app.before_request
+def require_login():
+    public_endpoints = ['login', 'static']
+
+    if request.endpoint not in public_endpoints and not current_user.is_authenticated:
+        return redirect(url_for('login'))
 
 @app.route("/uslugi", methods=["POST"])
 def uslugi():
@@ -634,6 +659,30 @@ def reset_strony():
     os._exit(0)  # kończy proces — w trybie debug Flask się zrestartuje automatycznie
 
     return redirect(url_for('strona_glowna'))  # Nie zostanie wykonane
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = users.get(username)
+
+        if user and user['password'] == password:
+            login_user(User(username))
+            flash('Zalogowano pomyślnie!')
+            return redirect(url_for('strona_glowna'))
+        else:
+            flash('Nieprawidłowy login lub hasło.')
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash('Wylogowano.')
+    return redirect(url_for('login'))
+
 
 if __name__ == "__main__":
     app.run(debug=True)
