@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Dodaj produkt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+
+    <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" style="width:100%; height:auto;">
+
+    
+    <h1>Dodaj produkt do zamówienia</h1>
+    <form action="{{ url_for('dodaj_produkt') }}" method="post">
+        <table>
+            <thead>
+                <tr>
+                    <th>Producent</th>
+                    <th>Materiał</th>
+                    <th>Typ</th>
+                    <th>Długość [cm]</th>
+                    <th>Szerokość [cm]</th>
+                    <th>Grubość [cm]</th>      
+                    <th>Rabat [%]</th>
+                    <th>Obróbka</th>
+                    <th>Ilość</th>
+                </tr>
+            </thead>
+            <tbody id="productTable">
+                {% for produkt in lista_produktow %}
+                <tr data-row-id="{{ loop.index0 }}">
+                    <td>
+                        <select name="producent_{{ loop.index0 }}" required onchange="updateMaterials(this)">
+                            <option value="Stolarz" {% if produkt.producent.nazwa == "Stolarz" %}selected{% endif %}>Stolarz</option>
+                            <option value="O rety parapety" {% if produkt.producent.nazwa == "O rety parapety" %}selected{% endif %}>O rety parapety</option>
+                            <option value="Olgran" {% if produkt.producent.nazwa == "Olgran" %}selected{% endif %}>Olgran</option>
+                            <option value="Imperial" {% if produkt.producent.nazwa == "Imperial" %}selected{% endif %}>Imperial</option>
+                            <option value="Forma system" {% if produkt.producent.nazwa == "Forma system" %}selected{% endif %}>Forma system</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" id="material_{{ loop.index0 }}" name="material_{{ loop.index0 }}" list="materialsList{{ loop.index0 }}" oninput="filterMaterials(this, 'materialsList{{ loop.index0 }}')" required value="{{ produkt.material }}">
+                        <datalist id="materialsList{{ loop.index0 }}"></datalist>
+                    </td>
+                    <td>
+                        <select name="typ_{{ loop.index0 }}" required>
+                            <option value="{{ produkt.typ }}" selected>{{ produkt.typ }}</option>
+                        </select>
+                    </td>
+                    <td><input type="text" name="dlugosc_{{ loop.index0 }}" value="{{ produkt.dlugosc }}" required></td>
+                    <td><input type="text" name="szerokosc_{{ loop.index0 }}" value="{{ produkt.szerokosc }}" required></td>
+                    <td>
+                        <select name="grubosc_{{ loop.index0 }}" required>
+                            <option value="{{ produkt.grubosc }}" selected>{{ produkt.grubosc }}</option>
+                        </select>
+                    </td>                   
+                    <td><input type="number" name="rabat_{{ loop.index0 }}" value="{{ produkt.rabat if produkt.rabat is defined else 0 }}" min="0" max="100"></td>
+                    <td><button type="button" class="addObrobka" data-row-id="{{ loop.index0 }}">Dodaj obróbkę</button></td>
+                    <input type="hidden" name="obrobki_{{ loop.index0 }}" value="{{ produkt.obrobki | join(', ') }}">
+                    <td><input type="text" name="ilosc_{{ loop.index0 }}" value="{{ produkt.ilosc }}" required></td>
+                    <td><button type="button" class="removeRow">Usuń</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <button type="button" id="addRow">Dodaj produkt</button>
+
+        <h1 id="customObrobkiHeader" style="display: {{ 'block' if custom_obrobki else 'none' }};">Dodatkowe obróbki</h1>
+        <table id="customObrobkiTable" style="display: {{ 'table' if custom_obrobki else 'none' }};">
+            <thead>
+                <tr>
+                    <th>Nazwa obróbki</th>
+                    <th>Cena [zł]</th>
+                    <th>Usuń</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obrobka in custom_obrobki %}
+                <tr>
+                    <td><input type="text" name="custom_obrobka_nazwa_{{ loop.index0 }}" value="{{ obrobka.nazwa }}" required></td>
+                    <td><input type="number" name="custom_obrobka_cena_{{ loop.index0 }}" value="{{ obrobka.cena }}" step="0.01" required></td>
+                    <td><button type="button" onclick="this.closest('tr').remove()">Usuń</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <button type="button" onclick="pokazTabeleObrobek()">Dodaj dodatkową obróbkę</button>
+        <br><br><br>
+        <button type="submit">Zatwierdź zamówienie</button>
+    </form>
+    
+    <div id="obrobkaModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black; min-width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000;">
+        <div class="modal-close" id="closeObrobkaModal">&times;</div>
+        <h2>Dodaj obróbkę</h2>
+        <div id="obrobkaList"></div>
+        <button id="zapiszObrobki" class="modal-save-button">Zapisz</button>
+    </div>
+
+    <script>
+        
+        const materials = {
+            "O rety parapety": [
+                "Ariston", "Botticino", "Baltic Grey", "Beige Marfil", "Bianco Ghiaccio", "Bianco Neve", "Breccia Aurora", "Calacatta", "Ceniza Pearl", "Madra Perla", "Misty White", "Nero Portoro", 
+                "Perlato Appia", "Polare", "Rosa Del Garda", "Royal Beige"
+
+            ],
+            "Olgran": [
+                "Super White", "Balmoral", "Bianco", "Strzeblów", "Strzegom", "Strzelin", "Bohus Grey", "Red", "Brąz Królewski", "Classic Brown", "Dark Grey", "Impala Marikana Dark", "Kashmir", 
+                "Colonial", "Valley", "Winter", "Coffee Brown", "Magma Gold", "Titanium Gold", "New Dark Grey", "Oscuro", "Titanium", "Forest", "Silver Paradiso", "Nero Assoluto", "Premium Black", 
+                "Nero Assoluto Satyna", "Premium Black Satyna", "Saida", "Santorini", "Spring Falls", "Star Gate", "Steel Grey Lappato", "Shivakashi", "Honey Dew", "Tan Brown", "Tołkowski", "Vanga", 
+                "Wiscount White", "Bianco Carrara", "Brecia Sarda", "Crema Marfil", "New Marfil", "Ambiente Light", "Angela Premium (CPW)", "Brilliant Black", "Calacatta Olympos", "Calacatta Silva", 
+                "Crystal Absolute White", "Crystal Anthracite", "Crystal Polar White", "Gobi Grey", "Noble Carrara", "Noble Quarzite", "Noble Concrete Grey", "Stardust (Desert Silver)", "Vera Gold", 
+                "Adamantium", "Artemis", "Elysium", "Polaris Gold", "Ocean"
+            ],
+            "Imperial": [
+                "Nero Antico", "Nero Satyna", "Nero Via Lactea", "Star Galaxy", "Steel Grey", "Altamonte", "Glencoe", "Bronze Coast", "Atlas Gold", "Atlas White", "Pico", "Atlas Gold Mat", "Cappucino", 
+                "Golden Dawn", "Nestos", "Maple Gaze", "Galactic Halo", "Venus Glow", "Imagine Grey", "Noble Areti Bianco", "Noble Supreme White", "Noble Pro Frost", "Taj Mahal (konglomerat kwarcowy)", 
+                "Taj Mahal Mat (konglomerat kwarcowy)", "Taj Mahal", "Negresco"
+            ],
+            "Stolarz": [
+                "Dąb"
+            ],
+            "Forma system": [
+                "Elegance Eco Nev", "Gobi Grey", "Crystal Royal", "Gobi Black", "Taurus Black", "Crystal Diamond", "Starlight Black", "Crystal Absolute White", "Crystal Polar White",
+                "Noble Carrara", "Noble Concrete Grey", "Noble Ivory White", "Noble Pro Frost", "Noble Quartzite", "Nobe Athos Brown", "Noble Linea", "Noble Areti Bianco", "Noble Imperial Grey",
+                "Noble Supreme White", "Ambiente Light", "Crystal Calacatta Silva", "Glencoe", "Calacatta Olympos", "Mystery White", "Blanco Maple", "Coral Clay", "Negro Tebas", "Linen Cream",
+                "Motion Grey", "Desert Silver", "Lagoon", "Snowy Ibiza", "Persian White", "Siberian Frost", "Blanco Zeus", "Eternal Statuario", "White Arabesque", "Eternal Calacatta Gold",
+                "Ethereal Glow", "Charcoal Soapstone", "Et. Noir", "Rivere Rose", "Blanc Eysee", "Versailles Invory", "Parisien Blue", "Negro Tebas Suede", "Desert Silver Suede",
+                "Coral Clay Suede", "Lime Delight Suede", "Charcoal Soapstone Suede", "Brasil", "White Ocean", "Dolomite Grey", "Emerald Dream", "Marmi Lava", "Madrea Green",
+                "India Pearl", "Arctic Storm", "Alpine Blue", "Eter", "Danae", "Kairos", "Kira", "Sabbia", "Trilium", "Grigio", "Grafite", "Ava", "Marmorio", "Nebbia", "Nebu", "Sandik",
+                "Kelya", "Kreta", "Sirius", "Laos", "Soke", "Zenit", "Aura", "Entzo", "Laurent", "Rem", "Arga", "Albarium", "Bergen", "Helena", "Taga", "Zenith", "State", "Nerok",
+                "Novam", "Zephyr"
+            ]
+        };
+
+        const forma_technistone = [
+            "Elegance Eco Nev", "Gobi Grey", "Crystal Royal", "Gobi Black", "Taurus Black", "Crystal Diamond", "Starlight Black", "Crystal Absolute White", "Crystal Polar White",
+            "Noble Carrara", "Noble Concrete Grey", "Noble Ivory White", "Noble Pro Frost", "Noble Quartzite", "Nobe Athos Brown", "Noble Linea", "Noble Areti Bianco", "Noble Imperial Grey",
+            "Noble Supreme White", "Ambiente Light", "Crystal Calacatta Silva", "Glencoe", "Calacatta Olympos", "Mystery White", "Blanco Maple", "Coral Clay", "Negro Tebas", "Linen Cream",
+            "Motion Grey", "Desert Silver", "Lagoon", "Snowy Ibiza", "Persian White", "Siberian Frost", "Blanco Zeus", "Eternal Statuario", "White Arabesque", "Eternal Calacatta Gold",
+            "Ethereal Glow", "Charcoal Soapstone", "Et. Noir", "Rivere Rose", "Blanc Eysee", "Versailles Invory", "Parisien Blue", "Negro Tebas Suede", "Desert Silver Suede",
+            "Coral Clay Suede", "Lime Delight Suede", "Charcoal Soapstone Suede", "Brasil", "White Ocean", "Dolomite Grey", "Emerald Dream", "Marmi Lava", "Madrea Green",
+            "India Pearl", "Arctic Storm", "Alpine Blue"
+        ];
+        
+        const forma_dekton = [
+            "Eter", "Danae", "Kairos", "Kira", "Sabbia", "Trilium", "Grigio", "Grafite", "Ava", "Marmorio", "Nebbia", "Nebu", "Sandik",
+                "Kelya", "Kreta", "Sirius", "Laos", "Soke", "Zenit", "Aura", "Entzo", "Laurent", "Rem", "Arga", "Albarium", "Bergen", "Helena", "Taga", "Zenith", "State", "Nerok",
+                "Novam", "Zephyr"
+        ];
+
+        const thicknesses = {};
+        
+        let customObrobkaIndex = {{ custom_obrobki|length if custom_obrobki else 0 }};
+
+
+        function dodajWierszCustomObrobki() {
+            const table = document.getElementById("customObrobkiTable").querySelector("tbody");
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td><input type="text" name="custom_obrobka_nazwa_${customObrobkaIndex}" required></td>
+                <td><input type="number" name="custom_obrobka_cena_${customObrobkaIndex}" step="0.01" required></td>
+                <td><button type="button" onclick="this.closest('tr').remove()">Usuń</button></td>
+            `;
+
+            table.appendChild(row);
+            customObrobkaIndex++;
+        }
+
+        for (const company in materials) {
+            materials[company].forEach(material => {
+                let thickness;
+
+                if (company === "O rety parapety") {
+                    thickness = [2.0, 3.0];
+                } else if (company === "Olgran" || company === "Imperial") {
+                    thickness = [2.0, 3.0];
+                } else if (company === "Stolarz") {
+                    thickness = [3.0, 4.0, 5.0, 6.0];
+                } else if (company === "Forma system") {
+                    thickness = [1.2, 2.0]
+                }
+
+                if (!thicknesses[material]) {
+                    thicknesses[material] = {};
+                }
+
+                thicknesses[material][company] = thickness;
+            });
+        }
+
+        function formatThickness(thickness) {
+            return Number.isInteger(thickness) ? thickness.toString() : thickness.toFixed(1);
+        }
+
+        function formatThickness(thickness) {
+            const num = parseFloat(thickness);
+            if (Number.isNaN(num)) return thickness;
+            return Number.isInteger(num) ? num.toString() : num.toFixed(1);
+        }
+
+        function updateThickness(row) {
+            const producent = row.querySelector("select[name^='producent']").value;
+            const material = row.querySelector("input[name^='material']").value;
+            const thicknessSelect = row.querySelector("select[name^='grubosc']");
+
+            let currentValue = formatThickness(thicknessSelect.value);
+
+            thicknessSelect.innerHTML = "";
+
+            const possibleThicknesses = [];
+
+            if (thicknesses[material] && thicknesses[material][producent]) {
+                thicknesses[material][producent].forEach(thickness => {
+                    const formatted = formatThickness(thickness);
+                    possibleThicknesses.push(formatted);
+                    const option = document.createElement("option");
+                    option.value = formatted;
+                    option.textContent = formatted;
+                    thicknessSelect.appendChild(option);
+                });
+            }
+
+            // Teraz sprawdź: jeśli obecna wartość istnieje w możliwych opcjach → ustaw ją
+            if (possibleThicknesses.includes(currentValue)) {
+                thicknessSelect.value = currentValue;
+            } else if (possibleThicknesses.length > 0) {
+                // jeśli nie — wybierz pierwszą dostępną
+                thicknessSelect.value = possibleThicknesses[0];
+            }
+        }
+
+
+        document.addEventListener("input", function (event) {
+            if (event.target.name.startsWith("material")) {
+                const row = event.target.closest("tr");
+                updateThickness(row);
+            }
+        });
+
+        function updateMaterials(selectElement, zeruj = true) {
+            const row = selectElement.closest("tr");
+            const producent = selectElement.value;
+            const materialInput = row.querySelector("input[name^='material']");
+            const materialList = row.querySelector("datalist");
+            const datalistId = materialList.id; // Unikalne ID dla tego wiersza
+
+            if(zeruj) {
+                materialInput.value = ""; // Reset materiału na pusty tekst
+            }
+            materialList.innerHTML = ""; // Wyczyść listę materiałów
+
+            if (producent === "Stolarz") {
+                // Dąb dla Stolarza
+                const option = document.createElement("option");
+                option.value = "Dąb";
+                option.textContent = "Dąb";
+                materialList.appendChild(option);
+                materialInput.value = "Dąb"; // Ustawienie domyślnego materiału na Dąb
+                materialInput.readOnly = true; // Zablokuj pole w przypadku Stolarza
+            } else {
+                materialInput.readOnly = false;
+                if (producent in materials) {
+                    materials[producent].forEach(function (material) {
+                        const option = document.createElement("option");
+                        option.value = material;
+                        option.textContent = material;
+                        materialList.appendChild(option);
+                    });
+                }
+            }
+
+            const typeSelect = row.querySelector("select[name^='typ']");
+            typeSelect.innerHTML = "";
+            ["Parapet", "Blat"].forEach(function (type) {
+                const option = document.createElement("option");
+                option.value = type;
+                option.textContent = type;
+                typeSelect.appendChild(option);
+            });
+
+            updateThickness(row);
+        }
+
+        function filterMaterials(inputElement, datalistId) {
+            const filterValue = inputElement.value.toLowerCase();
+            const datalist = document.getElementById(datalistId); // Znajdź datalist według unikalnego ID
+            const options = datalist.querySelectorAll("option");
+            options.forEach(option => {
+                const optionText = option.value.toLowerCase();
+                option.style.display = optionText.includes(filterValue) ? "block" : "none";
+            });
+        }
+
+        document.getElementById("addRow").addEventListener("click", function () {
+            const table = document.getElementById("productTable");
+            const rowCount = table.rows.length;
+            const newRow = table.insertRow();
+            newRow.dataset.rowId = table.rows.length; // Przypisz unikalny identyfikator
+
+            const datalistId = newRow.dataset.rowId; // Unikalne ID dla nowego wiersza
+
+            newRow.innerHTML = `
+                <td>
+                    <select name="producent_${datalistId}" required onchange="updateMaterials(this)">
+                        <option value="Stolarz">Stolarz</option>
+                        <option value="O rety parapety">O rety parapety</option>
+                        <option value="Olgran">Olgran</option>
+                        <option value="Imperial">Imperial</option>
+                        <option value="Forma system">Forma system</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" name="material_${datalistId}" list="materialsList_${datalistId}" oninput="filterMaterials(this, 'materialsList_${datalistId}')" required>
+                    <datalist id="materialsList_${datalistId}"></datalist>
+                </td>
+                <td><select name="typ_${datalistId}" required></select></td>
+                <td><input type="text" name="dlugosc_${datalistId}" value="0" required></td>
+                <td><input type="text" name="szerokosc_${datalistId}" value="0" required></td>
+                <td>
+                    <select name="grubosc_${datalistId}" required>
+                    </select>
+                </td>     
+                <td><input type="number" name="rabat_${datalistId}" value="0" min="0" max="100"></td>
+                <td><button type="button" class="addObrobka" data-row-id="${datalistId}">Dodaj obróbkę</button></td>
+                <td><input type="number" name="ilosc_${datalistId}" value="1" required></td>
+                <td><button type="button" class="removeRow">Usuń</button></td>
+            `; 
+
+            if (rowCount > 0) {
+                const lastRow = table.rows[rowCount - 1]; // Pobranie przedostatniego wiersza
+
+                // Przepisanie wartości dla "producent"
+                const prevProducent = lastRow.querySelector("select[name^='producent']");
+                const newProducent = newRow.querySelector("select[name^='producent']");
+                newProducent.value = prevProducent.value;
+
+                // Przepisanie wartości dla "material"
+                const prevMaterial = lastRow.querySelector(`input[name^='material']`);
+                const newMaterial = newRow.querySelector(`input[name^='material']`);
+                newMaterial.value = prevMaterial.value;
+
+                updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
+
+                // Przepisanie wartości dla "typ"
+                const prevTyp = lastRow.querySelector("select[name^='typ']");
+                const newTyp = newRow.querySelector("select[name^='typ']");
+                [...newTyp.options].forEach(option => {
+                    option.selected = option.value === prevTyp.value;
+                });
+
+                // Przepisanie wartości dla "grubosc"
+                const prevGrubosc = lastRow.querySelector("select[name^='grubosc']");
+                const newGrubosc = newRow.querySelector("select[name^='grubosc']");
+                
+                [...newGrubosc.options].forEach(option => {
+                    option.selected = option.value === prevGrubosc.value;
+                });
+
+                // Przepisanie wartości dla "rabat"
+                const prevRabat = lastRow.querySelector("input[name^='rabat']");
+                const newRabat = newRow.querySelector("input[name^='rabat']");
+                newRabat.value = prevRabat.value;
+
+            } else {
+                // Przepisanie wartości dla "producent"
+                const newProducent = newRow.querySelector("select[name^='producent']");
+                newProducent.value = "Stolarz";
+
+                // Przepisanie wartości dla "material"
+                const newMaterial = newRow.querySelector(`input[name^='material']`);
+                newMaterial.value = "Dąb";
+
+
+                updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
+
+            }
+        });
+
+        document.addEventListener("click", function(event) {
+            if (event.target.classList.contains("removeRow")) {
+                event.target.closest("tr").remove();
+            }
+        });
+
+        window.onload = function () {
+            document.querySelectorAll("#productTable tr").forEach(row => updateThickness(row));
+        };
+
+
+        const obrobkiMap = {{ obrobki_data | tojson | safe }};
+        let currentObrobkaRowId; // Przechowuje ID aktualnie edytowanego wiersza
+
+        document.addEventListener("click", function(event) {
+            if (event.target.classList.contains("addObrobka")) {
+                currentObrobkaRowId = event.target.dataset.rowId;
+                openObrobkaModal(currentObrobkaRowId);
+            }
+        });
+
+        const jednostkiObrobek = {};
+
+        for (const [producent, obrobki] of Object.entries(obrobkiMap)) {
+            for (const [nazwa, dane] of Object.entries(obrobki)) {
+                jednostkiObrobek[nazwa] = dane.jednostka;
+            }
+        }
+
+        function openObrobkaModal(rowId) {
+            document.getElementById("modalBackdrop").style.display = "block";
+            document.getElementById("obrobkaModal").style.display = "block";
+
+            const row = document.querySelector(`tr[data-row-id='${rowId}']`);
+            let producent = row.querySelector("select[name^='producent']").value.toLowerCase().replace(/\s+/g, '');
+            let typ = row.querySelector("select[name^='typ']").value.toLowerCase();
+            let material = row.querySelector("input[name^='material']").value;    
+
+            const obrobkaList = document.getElementById("obrobkaList");
+            obrobkaList.innerHTML = ""; // Wyczyść listę obróbek
+
+            const hiddenInput = row.querySelector("input[name^='obrobki_']");
+            const selectedMap = {};  
+            if (hiddenInput && hiddenInput.value) {
+            hiddenInput.value
+                .split(", ")
+                .forEach(item => {
+                const [name, count] = item.split(":");
+                selectedMap[name.trim()] = count ? parseInt(count, 10) : null;
+                });
+            }
+            console.log("selected obrobki map:", selectedMap);
+
+            const createCategorySection = (title, obrobki) => {
+                const categoryTitle = document.createElement("h4");
+                categoryTitle.textContent = title;
+                obrobkaList.appendChild(categoryTitle);
+
+                obrobki.forEach(obrobka => {
+                    if (!(obrobka in obrobkiMap[producent])) return;
+
+                    const div = document.createElement("div");
+                    div.classList.add("obrobka-row");
+
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.value = obrobka;
+                    checkbox.id = `obrobka_${obrobka}`;
+                    if (selectedMap.hasOwnProperty(obrobka)) checkbox.checked = true;
+
+                    const label = document.createElement("label");
+                    label.htmlFor = checkbox.id;
+                    label.textContent = obrobka;
+                    label.style.marginLeft = "5px";
+                    label.style.flex = "1";
+
+                    const ilosc = parseFloat(row.querySelector("input[name^='ilosc']").value) || 1;
+                    const dlugosc = parseFloat(row.querySelector("input[name^='dlugosc']").value) || 0;
+                    const szerokosc = parseFloat(row.querySelector("input[name^='szerokosc']").value) || 0;
+                    const grubosc = parseFloat(row.querySelector("select[name^='grubosc']").value) || 0;
+
+
+                    const jednostka = jednostkiObrobek[obrobka];
+                    let countForCalc = ilosc;
+                    if (jednostka === "ilosc" && selectedMap[obrobka] != null) {
+                    countForCalc = selectedMap[obrobka];
+                    }
+                    const cena = policzCeneObrobki(obrobka, producent, countForCalc, dlugosc, szerokosc, grubosc);
+
+
+                    const examplePrice = document.createElement("span");
+                    examplePrice.style.fontSize = "0.9em";
+                    examplePrice.style.color = "gray";
+                    examplePrice.style.marginLeft = "10px";
+                    examplePrice.textContent = cena !== null ? `~ ${cena} zł` : "brak danych";
+
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+
+                    if (producent == "formasystem") {
+                        // Dodaj obrazek, jeśli istnieje
+                        const image = document.createElement("img");
+                        image.src = `/static/images/${obrobka.toLowerCase()}.jpg`;
+                        console.log(image.src)
+                        image.alt = `Obróbka ${obrobka}`;
+                        image.style.maxWidth = "150px";
+                        image.style.marginLeft = "10px";
+                        image.onerror = () => image.style.display = "none"; // ukryj, jeśli obrazek nie istnieje
+                        div.appendChild(image)
+                    }
+
+                    // DODAJ INPUT NA ILOŚĆ TYLKO JEŚLI jednostka to "ilosc"
+                    if (jednostka === "ilosc") {
+                        const quantity = document.createElement("input");
+                        quantity.type = "number";
+                        quantity.min = 1;
+                        quantity.value = selectedMap[obrobka] || 1;
+                        quantity.style.width = "40px";
+                        quantity.style.marginLeft = "10px";
+
+       
+                        quantity.addEventListener("input", () => {
+                            const aktualnaIlosc = parseFloat(quantity.value) || 1;
+                            const nowaCena = policzCeneObrobki(obrobka, producent, aktualnaIlosc, dlugosc, szerokosc);
+                            examplePrice.textContent = nowaCena !== null ? `~ ${nowaCena} zł` : "brak danych";
+                        });
+
+                        div.appendChild(quantity);
+                    }
+
+                    div.appendChild(examplePrice);
+
+                    obrobkaList.appendChild(div);
+                });
+            };
+            
+            if (obrobkiMap[producent]) {
+                const allObrobki = obrobkiMap[producent];
+
+                if (producent === "stolarz") {
+                    const allObrobki = obrobkiMap["stolarz"];
+
+                    const obrobkaPodstawowa = ["Otwór", "Lakier", "Kształt koła", "Frez pod okno", "Nieregularne kształty", "Podklejka", "Frez na led", "Bateria", "Barwienie Parapet", "Barwienie Blat"];
+                    const blatyLazienkowe = ["Odpływ", "Umywalka nablatowa", "Umywalka podwieszana"];
+
+                    const jednostkiObrobek = {};
+
+                    // Ustaw jednostki
+                    for (const nazwa of [...obrobkaPodstawowa, ...blatyLazienkowe]) {
+                        if (allObrobki[nazwa]) {
+                            jednostkiObrobek[nazwa] = allObrobki[nazwa].jednostka;
+                        }
+                    }
+
+                    createCategorySection("Obróbka podstawowa", obrobkaPodstawowa);
+                    createCategorySection("Blaty łazienkowe - obróbka", blatyLazienkowe);
+                } else if (producent === "oretyparapety") {
+                    const allObrobki = obrobkiMap["oretyparapety"];
+
+                    const obrobkaPodstawowa = [
+                        "Cięcie po skosie", 
+                        "Otwór nablatowy", 
+                        "Otwór bateria", 
+                        "Otwór syfon", 
+                        "Wycięcie narożnika", 
+                        "Wycięcie narożnika (poler)", 
+                        "Podpoler"
+                    ];
+
+                    const blatyLazienkowe = [
+                        "Odpływ", 
+                        "Umywalka nablatowa"
+                    ];
+
+                    const jednostkiObrobek = {};
+
+                    for (const nazwa of [...obrobkaPodstawowa, ...blatyLazienkowe]) {
+                        if (allObrobki[nazwa]) {
+                            jednostkiObrobek[nazwa] = allObrobki[nazwa].jednostka;
+                        }
+                    }
+
+                    createCategorySection("Obróbka podstawowa", obrobkaPodstawowa);
+                    createCategorySection("Blaty łazienkowe - obróbka", blatyLazienkowe);
+                } else if (producent == "formasystem") {
+                    let kategoria = null;
+                    
+                    if (forma_technistone.includes(material)) {
+                        kategoria = "1";
+                    } else if (forma_dekton.includes(material)) {
+                        kategoria = "2";
+                    }
+
+                    let zlewozmywak = [], profile_krawedzi = [], rodzaje_podklejek_blatow = [],
+                        cokoliki = [], otwory = [], rowki_ociekaczy = [], rodzaje_wyciec = [],
+                        zlewozmywaki2 = [], profile_krawedzi2 = [], rodzaje_podklejek_blatow2 = [],
+                        ociekacz_szlif_cokolik = [], otwory2 = [], rodzaje_wyciec2 = [], inne = [], blaty_lazienkowe2 = [];
+                        
+                    if (kategoria === "1") {
+                        zlewozmywak = ["ZLEWOZMYWAK KLEJONY Z KONGLOMERATU KWARCOWEGO", "ZLEWOZMYWAK KLEJONY Z KONGLOMERATU KWARCOWEGO + KOREK AUTOMATYCZNY"];
+                        profile_krawedzi = ["Krawędzie fazowane", "Ćwierćwałek", "Połwałek", "Szeroka faza góra i dół", "Krawędzie zaokrągloine, góra i dół", "Krawędzie: ścięcie od dołu", "Krawędzie: ścięcie od góry", "Krawędź ozdobna", "DODATKOWY POLER lub SZLIF POWIERZCHNI"];
+                        rodzaje_podklejek_blatow = ["Klejenie - kanapka", "Klejenie - kanapka z fazą", "Podklejka 45 stopni + zawinięcie", "Podklejka 45 stopni", "Podklejka 45 stopni + podklejenie pianką", "Podklejka 45 stopni + zawinięcie 45 stopni"];
+                        cokoliki = ["Cokolik do 10 cm wysokości", "Cokolik od 10 do 15 cm wysokości"];
+                        otwory = ["Zlew nablatowy", "Płya grzewcza", "Umywalka nablatowa", "Zlew licowany", "Licowanie płyty", "Zlew podwieszany", "Umywalka podwieszana", "Zlew podwieszany i licowany od spodu", "Zlew podklejony z ukrytą krawędzią łączenia", "Wzmocnienia", "Bateria", "Korek", "Dozownik", "Filtr do wody", "Otwór mały do fi 3,5 cm", "Power-port", "Gniazdo elektryczne", "Odpływ umywalki"];
+                        rowki_ociekaczy = ["Rowki ociekaczy", "Ociekacz", "Ociekacz z rowkami", "Frez na led", "Kapinos"];
+                        rodzaje_wyciec = ["Wycięcie narożnika", "Wycięcie kształt L", "Wycięcie kształt C", "Wycięcie kształt T", "Cięcie skośne do krawędzi poziomej", "Cięcie skośne do krawędzi prostopadłej", "Cięcie skośne", "Dwa cięcia skośne", "Dwa cięcia skośne do krawędzi", "Kształt G", "Kształt trojkąt", "Zaokrąglenie krawędzi powyżej R 5cm", "Kształt półkole", "Kształt koło", "Kształt Y"];
+                        Object.keys(allObrobki).filter(o =>
+                        ![...zlewozmywak, ...profile_krawedzi, ...rodzaje_podklejek_blatow, ...cokoliki, ...otwory, ...rowki_ociekaczy, ...rodzaje_wyciec].includes(o)
+                        );
+                        createCategorySection("Zlewozmywak", zlewozmywak);
+                        createCategorySection("Profile krawędzi", profile_krawedzi);
+                        createCategorySection("Rodzaje podklejek blatów na długości", rodzaje_podklejek_blatow);
+                        createCategorySection("Cokoliki", cokoliki);
+                        createCategorySection("Otwory", otwory);
+                        createCategorySection("Rowki ociekaczy i ociekacze", rowki_ociekaczy);
+                        createCategorySection("Rodzaje wycięć", rodzaje_wyciec);
+                        if (inne.length) createCategorySection("Inne", inne);
+
+                    
+                    } else if (kategoria === "2") {
+                        zlewozmywaki2 = ["FORMA-INTEGRA CERAMIKA KOPERTA", "FORMA-INTEGRA CERAMIKA LINIOWY"];
+                        profile_krawedzi2 = ["Krawędzie fazowane SPIEK", "Szeroka faza", "Krawędzie: ścięcie od dołu SPIEK", "Szeroka faza góra i dół SPIEK"];
+                        rodzaje_podklejek_blatow2 = ["Podklejka 45 stopni SPIEK", "Podklejka 45 stopni + zawinięcie 45 stopni SPIEK"];
+                        ociekacz_szlif_cokolik = ["Ociekacz SPIEK", "Dodatkowy szlif powierzchni", "Cokolik do 10 cm wysokości SPIEK"];
+                        otwory2 = ["Zlew nablatowy SPIEK", "Płya grzewcza SPIEK", "Umywalka nablatowa SPIEK", "Zlew licowany SPIEK", "Licowanie płyty SPIEK", "Zlew podwieszany SPIEK", "Umywalka podwieszana SPIEK", "Bateria SPIEK", "Korek SPIEK", "Dozownik SPIEK", "Filtr do wody SPIEK", "Otwór mały do fi 3,5 cm SPIEK", "Power-port SPIEK", "Gniazdo elektryczne SPIEK", "Odpływ umywalki SPIEK", "Frez na led SPIEK", "Kapinos SPIEK"];
+                        rodzaje_wyciec2 = ["Wycięcie narożnika SPIEK", "Wycięcie kształt L SPIEK", "Wycięcie kształt C SPIEK", "Wycięcie kształt T SPIEK", "Cięcie skośne do krawędzi poziomej SPIEK", "Cięcie skośne do krawędzi prostopadłej SPIEK", "Cięcie skośne SPIEK", "Dwa cięcia skośne SPIEK", "Dwa cięcia skośne do krawędzi SPIEK", "Kształt G SPIEK", "Kształt trojkąt SPIEK", "Zaokrąglenie krawędzi powyżej R 5cm SPIEK", "Kształt półkole SPIEK", "Kształt koło SPIEK", "Kształt Y SPIEK"];
+                        Object.keys(allObrobki).filter(o =>
+                        ![...zlewozmywaki2, ...profile_krawedzi2, ...rodzaje_podklejek_blatow2, ...ociekacz_szlif_cokolik, ...otwory2, ...rodzaje_wyciec2].includes(o)
+                        );
+                        createCategorySection("Zlewozmywaki", zlewozmywaki2);
+                        createCategorySection("Profile krawędzi", profile_krawedzi2);
+                        createCategorySection("Rodzaje podklejek blatów na długości", rodzaje_podklejek_blatow2);
+                        createCategorySection("Ociekacz, szlif, cokolik", ociekacz_szlif_cokolik);
+                        createCategorySection("Otwory", otwory2);
+                        createCategorySection("Rodzaje wycięć", rodzaje_wyciec2);                        
+    
+                        if (inne.length) createCategorySection("Inne", inne);
+                    
+                    } else {
+                        createCategorySection("Inne", Object.keys(allObrobki));
+                        console.log("Nie sa w kategorii")
+                        alert("Wybrany materiał nie należy do znanych kategorii. Obróbki mogą być niekompletne.");
+                    }
+
+                } else if (producent == "formasystem"){
+                    createCategorySection("", Object.keys(allObrobki));
+                
+                } else if (producent === "olgran" || producent === "imperial") {
+                    const otwory = ["Bateria", "Power-port", "Gniazdo elektryczne", "Płyta grzewcza", "Zlew podwieszany", "Licowanie płyty", "Wzmocnienie otworu", "Zlew nablatowy", "Zlew licowany"];
+                    const dodatkiBlaty = ["Ociekacz","Paski na ociekaczu", "Paski na ociekaczu - komplet", "Podklejka z cięciem", "Cięcie 45 ST", "Kaliblator LED", "Impregnacja", "Cieniowanie materiału", "Podpoler do 10 cm", "Podpoler ponad 10 cm", "Szczotkowanie"];
+                    const parapetyBlaty = ["Kapinos", "Zaokrąglenie narożników", "Półwałek", "Ćwierćwałek", "Ćwierćwałek blatowy", "Ćwierćwałek profilowany", "Faza okrągła", "Obróbka prosta", "Cięcie po łuku", "Waterjet cięcie", "Fazowanie płytek"];
+                    const blatylazienkowe = ["Odpływ", "Umywalka nablatowa", "Umywalka podwieszana"];
+                    const inne = Object.keys(allObrobki).filter(o => ![...otwory, ...dodatkiBlaty, ...parapetyBlaty, ...blatylazienkowe].includes(o));
+
+                    createCategorySection("Otwory", otwory);
+                    createCategorySection("Dodatki - blaty", dodatkiBlaty);
+                    createCategorySection("Parapety / blaty obróbka", parapetyBlaty);
+                    createCategorySection("Blaty łazienkowe - obróbka", blatylazienkowe);
+                    if (inne.length) {
+                        createCategorySection("Inne", inne); 
+                    } else {
+                        Object.keys(allObrobki).forEach(obrobka => {
+                        const div = document.createElement("div");
+                        div.style.display = "flex";
+                        div.style.alignItems = "center";
+                        div.style.marginBottom = "5px";
+
+                        const checkbox = document.createElement("input");
+                        checkbox.type = "checkbox";
+                        checkbox.value = obrobka;
+                        checkbox.id = `obrobka_${obrobka}`;
+                        if (selectedObrobki.includes(obrobka)) checkbox.checked = true;
+
+                        const label = document.createElement("label");
+                        label.htmlFor = checkbox.id;
+                        label.textContent = obrobka;
+                        label.style.marginLeft = "5px";
+                        label.style.flex = "1";
+
+                        const jednostka = jednostkiObrobek[obrobka];
+                        let cena = policzCeneObrobki(obrobka, producent, ilosc, dlugosc, szerokosc);
+
+                        const examplePrice = document.createElement("span");
+                        examplePrice.style.fontSize = "0.9em";
+                        examplePrice.style.color = "gray";
+                        examplePrice.style.marginLeft = "10px";
+                        examplePrice.textContent = cena !== null ? `~ ${cena} zł` : "brak danych";
+
+                        div.appendChild(checkbox);
+                        div.appendChild(label);
+
+                        if (jednostka === "ilosc") {
+                            const quantity = document.createElement("input");
+                            quantity.type = "number";
+                            quantity.min = 1;
+                            quantity.value = selectedMap[obrobka] || 1;
+                            quantity.style.width = "40px";
+                            quantity.style.marginLeft = "10px";
+
+                            quantity.addEventListener("input", () => {
+                                const aktualnaIlosc = parseFloat(quantity.value) || 1;
+                                const nowaCena = policzCeneObrobki(obrobka, producent, aktualnaIlosc, dlugosc, szerokosc);
+                                examplePrice.textContent = nowaCena !== null ? `~ ${nowaCena} zł` : "brak danych";
+                            });
+
+                            div.appendChild(quantity);
+                        }
+
+                        div.appendChild(examplePrice);
+
+                        obrobkaList.appendChild(div);
+                    });
+                }
+                }
+            }
+
+            function obliczCeneStolarz(dlugosc, szerokosc, grubosc) {
+                const tabelka_stolarz = [
+                    [200, 250, 360, 420],
+                    [280, 400, 480, 550],
+                    [380, 480, 540, 700],
+                    [480, 550, 680, 730],
+                    [550, 670, 770, 860],
+                    [710, 770, 860, 970],
+                    [830, 950, 990, 1070],
+                    [900, 1030, 1160, 1230],
+                    [990, 1150, 1240, 1430]
+                ];
+            
+                const mb = dlugosc / 100;
+                const kolumna = Math.round(grubosc) - 3;
+                const wiersz = Math.ceil(szerokosc / 10) - 2;
+            
+                if (wiersz < 0 || kolumna < 0 || wiersz >= tabelka_stolarz.length || kolumna >= tabelka_stolarz[0].length) return 0;
+            
+                return tabelka_stolarz[wiersz][kolumna] * mb;
+            }
+            
+            function policzCeneObrobki(obrobka, producent, ilosc, dlugosc, szerokosc, grubosc, cenaProduktu = null) {
+                const dane = obrobkiMap?.[producent]?.[obrobka];
+                if (!dane) return null;
+            
+                const mb = dlugosc / 100;
+                const m2 = (dlugosc / 100) * (szerokosc / 100);
+                const jednostka = dane.jednostka;
+                const cena = dane.cena;
+            
+                if ((producent === "stolarz") && ["lakier", "nieregularne kształty"].includes(obrobka.toLowerCase())) {
+                    const cenaMaterialu = obliczCeneStolarz(dlugosc, szerokosc, grubosc);
+                    return Math.round(0.3 * cenaMaterialu);
+
+                }
+            
+                switch (jednostka) {
+                    case "ilosc": return Math.round(cena * ilosc);
+                    case "mb": return Math.round(cena * mb);
+                    case "m2": return Math.round(cena * m2);
+                    default: return null;
+                }
+            
+            
+            }
+
+            document.getElementById("obrobkaModal").style.display = "block";
+        }
+
+        // Obsługa przycisku zapisu obróbek
+        document.getElementById("zapiszObrobki").addEventListener("click", function () {
+            const selectedObrobki = [];
+
+        
+            // Przechodzimy po wszystkich checkboxach w modalu
+            document.querySelectorAll("#obrobkaList input[type='checkbox']").forEach(checkbox => {
+                if (!checkbox.checked) return;
+                const obrobka = checkbox.value;
+                const jednostka = jednostkiObrobek[obrobka] || null;
+                console.log(obrobka);
+                console.log(jednostka);
+
+                let finalValue = obrobka;
+
+                if (jednostka === "ilosc") {
+                    // Spróbuj znaleźć input typu number w tym samym rodzicu co checkbox
+                    const parentDiv = checkbox.closest("div");
+                    const inputIlosc = parentDiv.querySelector("input[type='number']");
+                    const ilosc = inputIlosc ? parseInt(inputIlosc.value) || 1 : 1;
+                    finalValue = `${obrobka}:${ilosc}`;
+                }
+
+                selectedObrobki.push(finalValue);
+            });
+
+            if (currentObrobkaRowId) {
+                const row = document.querySelector(`tr[data-row-id='${currentObrobkaRowId}']`);
+                let hiddenInput = row.querySelector("input[name^='obrobki_']");
+
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement("input");
+                    hiddenInput.type = "hidden";
+                    hiddenInput.name = `obrobki_${currentObrobkaRowId}`;
+                    row.appendChild(hiddenInput);
+                }
+
+                hiddenInput.value = selectedObrobki.join(", ");
+                console.log(hiddenInput.value);
+            }
+            console.log("Zapisano obróbki:", selectedObrobki);
+            document.getElementById("obrobkaModal").style.display = "none";
+            document.getElementById("modalBackdrop").style.display = "none";
+        });
+        
+
+        // Obsługa przycisku anulowania
+        document.getElementById("closeObrobkaModal").addEventListener("click", function () {
+            document.getElementById("obrobkaModal").style.display = "none";
+            document.getElementById("modalBackdrop").style.display = "none";
+        });
+
+        function pokazTabeleObrobek() {
+            const tabela = document.getElementById("customObrobkiTable");
+            const naglowek = document.getElementById("customObrobkiHeader");
+        
+            tabela.style.display = "table";
+            naglowek.style.display = "block";
+            dodajWierszCustomObrobki();
+        }
+
+        
+    </script>
+
+    <br>
+    <button onclick="window.location.href='/';">Strona główna</button><br>
+    <div id="modalBackdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.5); backdrop-filter: blur(5px); z-index: 999;"></div>
+</body>
+</html>

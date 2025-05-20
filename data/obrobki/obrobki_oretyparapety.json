@@ -5,6 +5,7 @@
     "Otwór syfon": { "jednostka": "ilosc", "cena": 200 },
     "Wycięcie narożnika": { "jednostka": "ilosc", "cena": 40 },
     "Wycięcie narożnika (poler)": { "jednostka": "ilosc", "cena": 80 },
-    "Podpoler": { "jednostka": "mb", "cena": 60 }
+    "Podpoler": { "jednostka": "mb", "cena": 60 },
+    "Odpływ": { "jednostka": "ilosc", "cena": 250 },
+    "Umywalka nablatowa": { "jednostka": "ilosc", "cena": 600 }
   }
-  

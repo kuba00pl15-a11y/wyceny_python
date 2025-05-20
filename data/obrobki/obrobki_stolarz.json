@@ -6,6 +6,11 @@
     "Nieregularne kształty": { "jednostka": "procent", "cena": 0.3, "typ": "od_produktu" },
     "Podklejka": { "jednostka": "mb", "cena": 150 },
     "Frez na led": { "jednostka": "mb", "cena": 15 },
-    "Bateria": { "jednostka": "ilosc", "cena": 60 }
+    "Bateria": { "jednostka": "ilosc", "cena": 60 },
+    "Barwienie Parapet": { "jednostka": "mb", "cena": 15},
+    "Barwienie Blat": { "jednostka": "mb", "cena": 25},
+    "Odpływ": { "jednostka": "ilosc", "cena": 250 },
+    "Umywalka nablatowa": { "jednostka": "ilosc", "cena": 600 },
+    "Umywalka podwieszana": { "jednostka": "ilosc", "cena": 900 }
 }
   

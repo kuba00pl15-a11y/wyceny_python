@@ -12,7 +12,6 @@ body {
 h1 {
     color: #333;
     margin-top: 20px; /* Odstęp nad linią */
-    margin-bottom: px; /* Odstęp pod nagłówkiem */
     font-size: 28px;
     text-align: left; /* Wyrównanie tekstu nagłówka */
     border-bottom: 2px solid #ccc; /* Linia nad nagłówkiem */
@@ -22,11 +21,9 @@ h1 {
 
 
 table {
-    
     border-collapse: collapse; /* Usunięcie podwójnych linii */
     margin-top: 20px; /* Odstęp od góry */
     margin-left: 5px; 
-    /* border: 2px solid #9f9e9e; linie tworzące całą tabelę */
 }
 
 th, td {
@@ -65,10 +62,12 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 14px; /* Mniejsza czcionka */
+    font-size: 14px;
     transition: 0.3s;
-    margin-left: 20px;
+    margin-left: 10px;
     display: block;
+    width: 168px;
+    height: 40px;
 }
 
 button:hover {
@@ -86,10 +85,10 @@ button:active {
 
 .przerwa_miedzy_przyciskami {
     display: flex;
-    gap: 4px; /* Odstęp między przyciskami */
+    gap: 4px;
 }
 
-/* Modal overlay (background shading) */
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -98,10 +97,9 @@ button:active {
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 999; /* Make sure it is above other content */
-    display: none; /* Initially hidden */
+    display: none;
 }
 
-/* Modal container */
 #obrobkaModal {
     position: fixed;
     top: 50%;
@@ -135,15 +133,23 @@ button:active {
     cursor: pointer;
 }
 
-#zapiszObrobki {
-    background-color: #28a745;
+.modal-close {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: red;
     color: white;
 }
 
-#anulujObrobki {
-    background-color: #dc3545;
-    color: white;
-}
 
 /* Styling for checkboxes and labels */
 #obrobkaList div {
@@ -162,17 +168,101 @@ button:active {
     max-height: 60vh; /* albo np. 400px */
     overflow-y: auto;
 }
-.modal-close {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 22px;
-    font-weight: bold;
-    color: #888;
+
+.modal-save-button {
+    background-color: #4CAF50; 
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
-    transition: color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
-.modal-close:hover {
-    color: #000;
+.modal-save-button:hover {
+    background-color: #45a049;
+}
+
+.modal-save-button:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.custom-button {
+    background-color: #3d3737;
+    color: white;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.3s;
+    margin-left: 20px;
+    display: block;
+    text-decoration: none;
+    text-align: center;
+    width: fit-content;
+    width: 140px;
+    height: 26px;
+}
+
+.custom-button:hover {
+    background-color: #ccac5c;
+}
+
+.custom-button:active {
+    background-color: #ccac5c;
+    transform: scale(0.95);
+}
+.obrobka-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 5px;
+    border-bottom: 1px solid #ddd;
+    flex-wrap: wrap;
+}
+
+.obrobka-row img {
+    max-height: 80px;
+    width: auto;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #fff;
+    object-fit: contain;
+    padding: 4px;
+}
+.obrobka-row input[type="number"] {
+    width: 50px;
+    padding: 4px;
+    font-size: 0.9em;
+}
+.resetbutton {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.resetbutton button {
+    background-color: #e53935; /* czerwony */
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    position: absolute;
+    right: 0;
+    margin-right: 20px;
+}
+
+.resetbutton button:hover {
+    background-color: #c62828;
+}
+
+.resetbutton button:active {
+    transform: scale(0.95);
 }

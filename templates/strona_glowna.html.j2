@@ -16,24 +16,36 @@
     <h1>Uzupełnij dane klienta</h1>
     <form action="/aktualizuj_klienta" method="POST">
         <label for="imie">Imię i nazwisko</label><br>
-        <input type="text" id="imie" name="imie" placeholder="{{ klient.imie }}" required style="width: 475px;"><br>
+        <input type="text" id="imie" name="imie" placeholder="{{ klient.imie }}" style="width: 475px;"><br>
     
-        <label for="adres">Adres</label><br>
-        <input type="text" id="adres" name="adres" placeholder="{{ klient.adres }}" required style="width: 475px;"><br>
+        <label for="adres">Adres zamieszkania</label><br>
+        <input type="text" id="adres" name="adres" placeholder="{{ klient.adres }}" style="width: 475px;"><br>
     
         <label for="nr_tel">Numer telefonu</label><br>
-        <input type="text" id="nr_tel" name="nr_tel" placeholder="{{ klient.nr_tel }}" required style="width: 475px;"><br><br>
-    
+        <input type="text" id="nr_tel" name="nr_tel" placeholder="{{ klient.nr_tel }}" style="width: 475px;"><br>
+        
+        <label for="adres_email">Adres email</label><br>
+        <input type="text" id="adres_email" name="adres_email" placeholder="{{ klient.adres_email }}" style="width: 475px;"><br>
+
+        <label for="kto_oferta">Ofertę przygotowuje:</label><br>
+        <select id="kto_oferta" name="kto_oferta" style="width: 475px;">
+            <option value="Justyna Kowalczyk" {% if klient.kto_oferta == 'Justyna Kowalczyk' %}selected{% endif %}>Justyna Kowalczyk</option>
+            <option value="Zuzanna Rzeszewska" {% if klient.kto_oferta == 'Zuzanna Rzeszewska' %}selected{% endif %}>Zuzanna Rzeszewska</option>
+            <option value="Piotr Pielowski" {% if klient.kto_oferta == 'Piotr Pielowski' %}selected{% endif %}>Piotr Pielowski</option>
+            <option value="Przemysław Kowalczyk" {% if klient.kto_oferta == 'Przemysław Kowalczyk' %}selected{% endif %}>Przemysław Kowalczyk</option>
+        </select><br>
+        
         <h3>Ważność wyceny</h3>
         <label for="dni">Dni:</label>
-        <input type="number" id="dni" name="dni" value="0" min="0" style="width: 60px;">
+        <input type="number" id="dni" name="dni" value="{{ klient.dni }}" min="0" style="width: 60px;">
         <label for="tygodnie">Tygodnie:</label>
-        <input type="number" id="tygodnie" name="tygodnie" value="0" min="0" style="width: 60px;">
+        <input type="number" id="tygodnie" name="tygodnie" value="{{ klient.tygodnie if klient.tygodnie else 2 }}" min="0" style="width: 60px;">
         <label for="miesiace">Miesiące:</label>
-        <input type="number" id="miesiace" name="miesiace" value="0" min="0" style="width: 60px;">
+        <input type="number" id="miesiace" name="miesiace" value="{{ klient.miesiace }}" min="0" style="width: 60px;">
+
         <br><br>
 
-        <button type="submit">Zaktualizuj klienta</button>
+        <button type="submit">Zatwierdź dane</button>
     </form>
     {% if zamowienie.lista_produktow %}
     <h1>Lista produktów</h1>
@@ -46,11 +58,10 @@
                 <th>Długość [cm]</th>
                 <th>Szerokość [cm]</th>
                 <th>Grubość [cm]</th>
-                <th>Ilość</th>
-                <th>Cena [zł]</th>
+                <th>Cena</th>
+                <th>Cena po rabacie [zł]</th>
                 <th>Obróbka</th>
                 <th>Cena obróbek [zł]</th>
-
             </tr>
         </thead>
         <tbody>
@@ -62,52 +73,132 @@
                 <td>{{ produkt.dlugosc }}</td>
                 <td>{{ produkt.szerokosc }}</td>
                 <td>{{ produkt.grubosc }}</td>
-                <td>{{ produkt.ilosc }}</td>
-                <td>{{ produkt.cena() }}</td>
+                <td>{{ '%.2f' % produkt.cena_przed_rabatem() }}</td>
+                <td>{{ '%.2f' % produkt.cena_po_rabacie() }}</td>
                 <td>{{ produkt.obrobki | join(', ') }}</td>
-                <td>{{ produkt.cena_obrobek() }}</td>
+                <td>{{ '%.2f' % produkt.cena_obrobek() }}</td>
 
             </tr>
             {% endfor %}
         </tbody>
     </table>
     
-    <p>Cena produktów: {{ zamowienie.laczna_cena() }}</p>
     {% endif %}
 
-    <h1>Usługi</h1>
-    <form method="post" action="/uslugi">
-        <label>
-            <input type="checkbox" name="pomiar" {% if usluga_pomiar %}checked{% endif %}>
-            Pomiar
-        </label>
-        <br>
-        <label>
-            <input type="checkbox" name="transport" {% if usluga_transport %}checked{% endif %}>
-            Transport
-        </label>
-        <br>
-        <label>
-            <input type="checkbox" name="montaz" {% if usluga_montaz %}checked{% endif %}>
-            Montaż
-        </label>
-        <br>
-        <br>
-        <label for="cena_u">Cena usługi</label><br>
-        <input type="number" id="cena_u" name="cena_u" value="{{ cena_uslugi }}" required style="width: 475px;">
-        <br>
-        <br>
-        <button type="submit">Zaktualizuj usługi</button>
-    </form>
+    {% if custom_obrobki %}
+    <h1>Dodatkowe obróbki</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Nazwa</th>
+                <th>Cena</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obrobka in custom_obrobki %}
+            <tr>
+                <td>{{ obrobka.nazwa }}</td>
+                <td>{{ obrobka.cena }} zł</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
 
 
-    <p><strong>Łączna cena:</strong> {{ laczna_cena_z_uslugami }} zł</p>
+<h1>Usługi</h1>
+<form method="post" action="/uslugi">
+    <label>
+    <input type="checkbox" name="pomiar_transport_montaz" id="pomiar_transport_montaz" {% if usluga_pmt %}checked{% endif %} onclick="togglePriceField('pomiar_transport_montaz')">
+        Pomiar, transport, montaż
+    </label><br>
 
+    <label>
+        <input type="checkbox" name="pomiar" id="pomiar" {% if usluga_pomiar %}checked{% endif %} onclick="togglePriceField('pomiar')">
+        Pomiar
+    </label><br>
+
+    <label>
+        <input type="checkbox" name="transport" id="transport" {% if usluga_transport %}checked{% endif %} onclick="togglePriceField('transport')">
+        Transport
+    </label><br>
+
+    <label>
+        <input type="checkbox" name="montaz" id="montaz" {% if usluga_montaz %}checked{% endif %} onclick="togglePriceField('montaz')">
+        Montaż
+    </label><br>
+
+    <div id="pomiar_transport_montaz_cena" class="pole-cena" style="display: {% if usluga_pmt %}block{% else %}none{% endif %};">
+        <label for="cena_pmt">Cena pomiaru, transportu i montażu</label><br>
+        <input type="number" id="cena_ppmmtt" name="cena_ppmmtt" value="{{ cena_ppmmtt }}" style="width: 475px;">
+    </div>
+
+    <div id="pomiar_cena" class="pole-cena" style="display: {% if usluga_pomiar %}block{% else %}none{% endif %};">
+        <label for="cena_pomiaru">Cena pomiaru</label><br>
+        <input type="number" id="cena_pomiaru" name="cena_pomiaru" value="{{ cena_pomiaruu }}" style="width: 475px;">
+    </div>
+
+    <div id="transport_cena" class="pole-cena" style="display: {% if usluga_transport %}block{% else %}none{% endif %};">
+        <label for="cena_transportu">Cena transportu</label><br>
+        <input type="number" id="cena_transportu" name="cena_transportu" value="{{ cena_transportt }}" style="width: 475px;">
+    </div>
+
+    <div id="montaz_cena" class="pole-cena" style="display: {% if usluga_montaz %}block{% else %}none{% endif %};">
+        <label for="cena_montazu">Cena montażu</label><br>
+        <input type="number" id="cena_montazu" name="cena_montazu" value="{{ cena_montazuu }}" style="width: 475px;">
+    </div>
+
+    <br>
+    <button type="submit">Zatwierdź usługi</button>
+</form>
+
+    <style>
+        .pole-cena {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+
+
+    <script>
+        function togglePriceField(service) {
+            var id_map = {
+                'pomiar_transport_montaz': 'pomiar_transport_montaz_cena',
+                'pomiar': 'pomiar_cena',
+                'transport': 'transport_cena',
+                'montaz': 'montaz_cena'
+            };
+            var priceField = document.getElementById(id_map[service]);
+            var checkbox = document.getElementById(service);
+            if (checkbox.checked) {
+                priceField.style.display = 'block';
+            } else {
+                priceField.style.display = 'none';
+            }
+        }
+
+        // Początkowa konfiguracja: jeśli checkboxy są zaznaczone, pola ceny będą widoczne
+        window.onload = function() {
+            ['pomiar_transport_montaz', 'pomiar', 'transport', 'montaz'].forEach(function(service) {
+                if (document.getElementById(service).checked) {
+                    togglePriceField(service);
+                }
+            });
+        };
+    </script>
+
+<h1></h1>
     <br>
     <div class="przerwa_miedzy_przyciskami">
         <button onclick="window.location.href='/dodaj_produkt';">Dodaj produkty</button>
-        <button onclick="window.location.href='/pdf';">Wygeneruj Wycenę</button>
+        <a href="/pdf_k" target="_blank" class="custom-button">PDF - klient</a>
+        <a href="/pdf" target="_blank" class="custom-button">PDF - Drewkam</a>
     </div>
+</div>
+<div class="resetbutton">
+    <form action="{{ url_for('reset_strony') }}" method="post" style="text-align: center; margin-top: 50px;">
+        <button type="submit">Reset strony</button>
+    </form>
     <br><br>
 </div>
 </body>
