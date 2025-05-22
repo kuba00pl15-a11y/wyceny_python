@@ -48,7 +48,7 @@ laczna_style = ParagraphStyle(
 )
 
 # Ścieżka do zdjęcia
-image_path = r"static\images\header.jpg"
+image_path = r"static/images/header.jpg"
 
 def generuj_PDF_klient(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_transport, usluga_montaz, cena_ppmmtt, cena_pomiaruu, cena_transportt, cena_montazuu, custom_obrobki=None):
     # Tworzenie dokumentu PDF

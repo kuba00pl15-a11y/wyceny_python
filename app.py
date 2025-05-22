@@ -4,8 +4,10 @@ from flask_login import LoginManager, login_user, logout_user, login_required, U
 import json
 import os
 
+app = Flask(__name__)
+
 def wczytaj_ceny_obrobek():
-    katalog = r"data\obrobki"
+    katalog = "data/obrobki"
     obrobki = {}
     for plik in os.listdir(katalog):
         nazwa = plik.replace("obrobki_", "").replace(".json", "").replace("_", " ").strip().lower().replace(" ", "")
@@ -47,7 +49,7 @@ class Stolarz(Producent):
         except IndexError:
             print(f"Błąd indeksu: wiersz={wiersz}, kolumna={kolumna}, szerokość={s}, grubość={g}")
             return 0
-    
+
     def cena(self, d, s, g, typ, material=""):
         cena_jednostkowa = self.cena_jed(d, s, g, typ)
         return cena_jednostkowa * self.mb(d)
@@ -88,11 +90,11 @@ class Oretyparapety(Producent):
             return tabelka_oretyparapety[material][kolumna]
         else:
             raise ValueError("Invalid material or thickness")
-        
+
     def cena(self, d, s, g, typ, material=""):
         cena_jednostkowa = self.cena_jed(d, s, g, typ, material)
         return cena_jednostkowa * self.m2(d, s)
-          
+
 
     @staticmethod
     def licz_cene_obrobki(nazwa_producenta, obrobka, ilosc, cena_produktu, mb, m2):
@@ -131,7 +133,7 @@ class Olgran(Producent):
             return tabelka_olgran[material][kolumna]
         else:
             raise ValueError("Invalid material or thickness")
-        
+
     def cena(self, d, s, g, typ, material=""):
             cena_jednostkowa = self.cena_jed(d, s, g, typ, material)
             return cena_jednostkowa * self.m2(d, s)
@@ -172,12 +174,12 @@ class Imperial(Producent):
         if material in tabelka_imperial and 0 <= kolumna < len(tabelka_imperial[material]):
             return tabelka_imperial[material][kolumna]
         else:
-            raise ValueError("Nieprawidłowy materiał albo grubość") 
-        
+            raise ValueError("Nieprawidłowy materiał albo grubość")
+
     def cena(self, d, s, g, typ, material=""):
         cena_jednostkowa = self.cena_jed(d, s, g, typ, material)
         return cena_jednostkowa * self.m2(d, s)
-                                                       
+
 
     @staticmethod
     def licz_cene_obrobki(nazwa_producenta, obrobka, ilosc, cena_produktu, mb, m2):
@@ -211,7 +213,7 @@ class Formasystem(Producent):
         czesc = 0
         kolumna = 0
         przedzialy = []
-        
+
         if g == 2.0:
             czesc = 1
             przedzialy = [151, 301, 501, 636, 751, 851, 1001, 1261, 1400]
@@ -219,7 +221,7 @@ class Formasystem(Producent):
         if g == 1.2:
             czesc = 0
             przedzialy = [151, 301, 501, 636, 751, 851, 1001, 1261, 1400]
-        
+
         for wartosc in przedzialy:
             if s * 10 >= wartosc:
                 kolumna += 1
@@ -227,13 +229,13 @@ class Formasystem(Producent):
                     break
             else:
                 break
-            
+
         return tabelka_forma[material][czesc][kolumna]
-    
+
     def cena(self, d, s, g, typ, material=""):
         cena_jednostkowa = self.cena_jed(d, s, g, typ, material)
         return cena_jednostkowa * self.mb(d) * 1.6
-      
+
     @staticmethod
     def licz_cene_obrobki(nazwa_producenta, obrobka, ilosc, cena_produktu, mb, m2):
         dane = obrobki_cennik.get(nazwa_producenta, {}).get(obrobka)
@@ -282,7 +284,7 @@ class Produkt:
 
     def cena(self):
         return round(self._wylicz_cene_bazowa() * self.ilosc)
-        
+
     def cena_przed_rabatem(self):
         return self.cena()
 
@@ -312,7 +314,7 @@ class Produkt:
                     suma += float(cena_obrobki) * ilosc
                 except ValueError:
                     print(f"Nieprawidłowa cena dla obróbki: {obrobka} → {cena_obrobki}")
-                    
+
         return round(suma, 2)
 
     def obrobki_z_cenami(self):
@@ -388,7 +390,7 @@ class Klient:
 
 klient = Klient()
 # dodaj klienta
-app = Flask(__name__)
+
 app.secret_key = "hfe9hf9wh"
 zamowienie = Zamowienie()
 producenty = {
@@ -423,6 +425,8 @@ cena_montazuu = ""
 cena_pomiaruu = ""
 cena_ppmmtt = ""
 
+
+
 @app.before_request
 def require_login():
     public_endpoints = ['login', 'static']
@@ -452,13 +456,13 @@ def uslugi():
 def strona_glowna():
     custom_obrobki = zamowienie.wlasne_obrobki if hasattr(zamowienie, "wlasne_obrobki") else []
 
-    return render_template("strona_glowna.html.j2", 
-        zamowienie=zamowienie, 
-        klient=klient, 
-        laczna_cena_z_uslugami=0.0, 
-        usluga_pomiar=usluga_pomiar, 
-        usluga_montaz=usluga_montaz, 
-        usluga_transport=usluga_transport, 
+    return render_template("strona_glowna.html.j2",
+        zamowienie=zamowienie,
+        klient=klient,
+        laczna_cena_z_uslugami=0.0,
+        usluga_pomiar=usluga_pomiar,
+        usluga_montaz=usluga_montaz,
+        usluga_transport=usluga_transport,
         usluga_pmt=usluga_pmt,
         cena_pomiaruu=cena_pomiaruu,
         cena_montazuu=cena_montazuu,
@@ -505,7 +509,7 @@ def dodaj_produkt():
                     produkty[id_] = {}
                 produkty[id_][pole] = wartosc
 
-        
+
         paczki_produktow = []
         for id_, dane in produkty.items():
             try:
@@ -593,7 +597,7 @@ def dodaj_produkt():
                         obrobki_data[producent] = json.load(f)
                     except json.JSONDecodeError:
                         print(f"Błąd wczytywania JSON z pliku {plik}")
-    
+
     return render_template(
     "dodaj_produkt.html",
     lista_produktow=zamowienie.lista_produktow,
