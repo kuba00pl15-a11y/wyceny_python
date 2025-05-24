@@ -586,7 +586,7 @@ def dodaj_produkt():
         return redirect(url_for("strona_glowna"))
 
     obrobki_data = {}
-    sciezka = r"data\obrobki"
+    sciezka = r"data/obrobki"
     if os.path.exists(sciezka):
         for plik in os.listdir(sciezka):
             print(plik)

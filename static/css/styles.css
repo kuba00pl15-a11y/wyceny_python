@@ -18,7 +18,55 @@ h1 {
     padding-top: 5px; 
     padding-left: 5px; 
 }
+.container {
+  background-color: #ffffff;
+  padding: 40px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+}
 
+h2 {
+  margin-bottom: 25px;
+  color: #333;
+  padding-right: 20px; 
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+}
+
+#rubryki_login {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-right: 30px; 
+
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+  
+}
+
+
+.flash-messages {
+  margin-top: 20px;
+}
+
+.flash-messages ul {
+  list-style: none;
+  padding: 0;
+  color: red;
+  font-weight: 500;
+}
 
 table {
     border-collapse: collapse; /* Usunięcie podwójnych linii */

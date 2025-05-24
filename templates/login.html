@@ -1,26 +1,48 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8" />
     <title>Logowanie</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
   </head>
   <body>
-    <h2>Zaloguj się</h2>
-    <form method="POST">
-      <input type="text" name="username" placeholder="Login" required /><br />
-      <input
-        type="password"
-        name="password"
-        placeholder="Hasło"
-        required
-      /><br />
-      <button type="submit">Zaloguj</button>
-    </form>
-    {% with messages = get_flashed_messages() %} {% if messages %}
-    <ul>
-      {% for msg in messages %}
-      <li>{{ msg }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %} {% endwith %}
+    <div class="container">
+      <h2>Zaloguj się</h2>
+      <form method="POST" class="login-form">
+        <div id="rubryki_login">
+          <div class="input-group">
+            <input type="text" name="username" placeholder="Login" required />
+          </div>
+          <div class="input-group">
+            <input
+              type="password"
+              name="password"
+              placeholder="Hasło"
+              required
+            />
+          </div>
+          <div class="button-group">
+            <button type="submit">Zaloguj</button>
+          </div>
+        </div>
+      </form>
+
+      {% with messages = get_flashed_messages() %} {% if messages %}
+      <div class="flash-messages">
+        <ul>
+          {% for msg in messages %}
+          <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %} {% endwith %}
+    </div>
   </body>
 </html>
