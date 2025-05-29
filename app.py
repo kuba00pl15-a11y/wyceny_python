@@ -664,19 +664,25 @@ def pdf_klient():
 
 @app.route('/reset_strony', methods=['POST'])
 def reset_strony():
+    global zamowienie, klient
+    global usluga_pomiar, usluga_transport, usluga_montaz, usluga_pmt
+    global cena_pomiaruu, cena_montazuu, cena_ppmmtt, cena_transportt
+
     session.clear()
-    # zamowienie=None
-    # klient=None
-    # usluga_pomiar=None
-    # usluga_transport=None
-    # usluga_montaz=None
-    # usluga_pmt=None
-    # cena_pomiaruu=None
-    # cena_montazuu=None
-    # cena_ppmmtt=None
-    # cena_transportt=None
-    # custom_obrobki=None
-    return redirect(url_for('strona_glowna'))  
+
+    zamowienie = Zamowienie()
+    klient = Klient()
+    usluga_pomiar = False
+    usluga_transport = False
+    usluga_montaz = False
+    usluga_pmt = False
+
+    cena_pomiaruu = ""
+    cena_transportt = ""
+    cena_montazuu = ""
+    cena_ppmmtt = ""
+
+    return redirect(url_for('strona_glowna'))
 
 
 
