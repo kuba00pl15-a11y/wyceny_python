@@ -1,11 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, Response, session, flash
 import math
-from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
+from flask_login import LoginManager, login_user, logout_user, UserMixin, current_user
 import json
 import os
 
 app = Flask(__name__)
-
 def wczytaj_ceny_obrobek():
     katalog = "data/obrobki"
     obrobki = {}
@@ -300,22 +299,24 @@ class Produkt:
         m2 = self.producent.m2(self.dlugosc, self.szerokosc)
         cena_bazowa = self._wylicz_cene_bazowa()
         klucz_producenta = self.producent.nazwa.lower().replace(" ", "")
+
         for obrobka in self.obrobki:
             ilosc = 1
-            print(obrobka)
             if ":" in obrobka:
                 ilosc = int(obrobka.split(":")[1])
                 obrobka = obrobka.split(":")[0]
+
             if hasattr(self.producent, "licz_cene_obrobki"):
                 cena_obrobki = self.producent.licz_cene_obrobki(
-                    klucz_producenta, obrobka, self.ilosc, cena_bazowa, mb, m2
+                    klucz_producenta, obrobka, ilosc, cena_bazowa, mb, m2
                 )
                 try:
-                    suma += float(cena_obrobki) * ilosc
+                    suma += float(cena_obrobki) * self.ilosc
                 except ValueError:
                     print(f"Nieprawidłowa cena dla obróbki: {obrobka} → {cena_obrobki}")
 
         return round(suma, 2)
+
 
     def obrobki_z_cenami(self):
         wynik = {}
@@ -331,15 +332,16 @@ class Produkt:
             else:
                 nazwa, ilosc = obrobka_raw, 1
 
+            ilosc_calkowita = ilosc * self.ilosc
+
             if nazwa not in wynik:
                 wynik[nazwa] = {"ilosc": 0, "cena_jednostkowa": 0.0}
 
             cena = self.producent.licz_cene_obrobki(klucz_producenta, nazwa, 1, cena_bazowa, mb, m2)
-            wynik[nazwa]["ilosc"] += ilosc
+            wynik[nazwa]["ilosc"] += ilosc_calkowita
             wynik[nazwa]["cena_jednostkowa"] = round(cena, 2)
 
         return [(nazwa, dane["ilosc"], dane["cena_jednostkowa"]) for nazwa, dane in wynik.items()]
-
 
 
 usluga_pomiar=False
@@ -375,7 +377,7 @@ class Klient:
         self.lista_zamowien.append(zamowienie)
 
     def wypisz_dane(self):
-        return f"Imię: {self.imie}, Adres: {self.adres}, Telefon: {self.nr_tel}, Adres email: {self.adres_email}, Ofetrę przygotowuje: {self.kto_oferta}"
+        return f"Imię: {self.imie}, Adres: {self.adres}, Telefon: {self.nr_tel}, Adres email: {self.adres_email}, Ofertę przygotowuje: {self.kto_oferta}"
 
     def aktualizuj_dane(self, imie="", adres="", nr_tel="", adres_email="", kto_oferta="", dni=0, tygodnie=0, miesiace=0):
         self.imie = imie if imie else ""
@@ -386,6 +388,7 @@ class Klient:
         self.dni = dni
         self.tygodnie = tygodnie
         self.miesiace = miesiace
+
 
 
 klient = Klient()
@@ -406,7 +409,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 users = {
-    'admin': {'password': 'p'}
+    'Drewkam': {'password': '1105'}
 }
 
 # Klasa użytkownika
@@ -426,13 +429,20 @@ cena_pomiaruu = ""
 cena_ppmmtt = ""
 
 
-
 @app.before_request
 def require_login():
     public_endpoints = ['login', 'static']
 
     if request.endpoint not in public_endpoints and not current_user.is_authenticated:
         return redirect(url_for('login'))
+
+def ustaw_cookie_jako_sesyjny():
+    session.permanent = False
+
+# @app.route("/wyczysc_sesje", methods=["POST"])
+# def wyczysc_sesje():
+#     session.clear()
+#     return "", 204
 
 @app.route("/uslugi", methods=["POST"])
 def uslugi():
@@ -455,7 +465,6 @@ def uslugi():
 @app.route("/", methods=["POST", "GET"])
 def strona_glowna():
     custom_obrobki = zamowienie.wlasne_obrobki if hasattr(zamowienie, "wlasne_obrobki") else []
-
     return render_template("strona_glowna.html.j2",
         zamowienie=zamowienie,
         klient=klient,
@@ -473,16 +482,16 @@ def strona_glowna():
 
 @app.route("/aktualizuj_klienta", methods=["POST"])
 def aktualizuj_klienta():
-    imie = request.form.get("imie")
-    adres = request.form.get("adres")
-    nr_tel = request.form.get("nr_tel")
-    adres_email = request.form.get("adres_email")
-    kto_oferta = request.form.get("kto_oferta")
-    dni = int(request.form.get("dni", 0))
-    tygodnie = int(request.form.get("tygodnie", 2))
-    miesiace = int(request.form.get("miesiace", 0))
-
-    klient.aktualizuj_dane(imie, adres, nr_tel, adres_email, kto_oferta, dni, tygodnie, miesiace)
+    klient.aktualizuj_dane(
+        imie=request.form.get("imie"),
+        adres=request.form.get("adres"),
+        nr_tel=request.form.get("nr_tel"),
+        adres_email=request.form.get("adres_email"),
+        kto_oferta=request.form.get("kto_oferta"),
+        dni=int(request.form.get("dni", 0)),
+        tygodnie=int(request.form.get("tygodnie", 2)),
+        miesiace=int(request.form.get("miesiace", 0))
+    )
     return redirect(url_for("strona_glowna"))
 
 
@@ -541,19 +550,18 @@ def dodaj_produkt():
                 for nazwa, ilosc in produkt_data["obrobki_z_iloscia"].items():
                     obrobki_rozwiniete.append("{}:{}".format(nazwa, ilosc))
 
-                for _ in range(produkt_data["ilosc"]):
-                    produkt = Produkt(
-                        producent=producent,
-                        material=produkt_data["material"],
-                        typ=produkt_data["typ"],
-                        rabat=produkt_data["rabat"],
-                        dlugosc=produkt_data["dlugosc"],
-                        szerokosc=produkt_data["szerokosc"],
-                        grubosc=produkt_data["grubosc"],
-                        ilosc=1,
-                        obrobki=obrobki_rozwiniete
-                    )
-                    zamowienie.dodaj_produkt(produkt)
+                produkt = Produkt(
+                    producent=producent,
+                    material=produkt_data["material"],
+                    typ=produkt_data["typ"],
+                    rabat=produkt_data["rabat"],
+                    dlugosc=produkt_data["dlugosc"],
+                    szerokosc=produkt_data["szerokosc"],
+                    grubosc=produkt_data["grubosc"],
+                    ilosc=produkt_data["ilosc"],
+                    obrobki=obrobki_rozwiniete
+                )
+                zamowienie.dodaj_produkt(produkt)
 
                 print(f"Dodano produkt: {produkt.__dict__}")
             except Exception as e:
@@ -599,11 +607,12 @@ def dodaj_produkt():
                         print(f"Błąd wczytywania JSON z pliku {plik}")
 
     return render_template(
-    "dodaj_produkt.html",
-    lista_produktow=zamowienie.lista_produktow,
-    obrobki_data=obrobki_data,
-    custom_obrobki=zamowienie.wlasne_obrobki
-)
+        "dodaj_produkt.html",
+        lista_produktow=zamowienie.lista_produktow,
+        obrobki_data=obrobki_data,
+        custom_obrobki=zamowienie.wlasne_obrobki
+    )
+    
 
 
 
@@ -655,29 +664,34 @@ def pdf_klient():
 
 @app.route('/reset_strony', methods=['POST'])
 def reset_strony():
-    # Wyczyszczenie danych jeśli trzeba
-    if os.path.exists('dane.csv'):
-        os.remove('dane.csv')
+    session.clear()
+    # zamowienie=None
+    # klient=None
+    # usluga_pomiar=None
+    # usluga_transport=None
+    # usluga_montaz=None
+    # usluga_pmt=None
+    # cena_pomiaruu=None
+    # cena_montazuu=None
+    # cena_ppmmtt=None
+    # cena_transportt=None
+    # custom_obrobki=None
+    return redirect(url_for('strona_glowna'))  
 
-    # Restart serwera - TYLKO do testów lokalnych!
-    os._exit(0)  # kończy proces — w trybie debug Flask się zrestartuje automatycznie
 
-    return redirect(url_for('strona_glowna'))  # Nie zostanie wykonane
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         user = users.get(username)
-
         if user and user['password'] == password:
             login_user(User(username))
             flash('Zalogowano pomyślnie!')
             return redirect(url_for('strona_glowna'))
         else:
             flash('Nieprawidłowy login lub hasło.')
-
     return render_template('login.html')
 
 

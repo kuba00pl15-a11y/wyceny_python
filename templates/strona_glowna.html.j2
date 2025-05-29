@@ -16,16 +16,16 @@
     <h1>Uzupełnij dane klienta</h1>
     <form action="/aktualizuj_klienta" method="POST">
         <label for="imie">Imię i nazwisko</label><br>
-        <input type="text" id="imie" name="imie" placeholder="{{ klient.imie }}" style="width: 475px;"><br>
+        <input type="text" id="imie" name="imie" value="{{ klient.imie }}" style="width: 475px;"><br>
     
         <label for="adres">Adres zamieszkania</label><br>
-        <input type="text" id="adres" name="adres" placeholder="{{ klient.adres }}" style="width: 475px;"><br>
+        <input type="text" id="adres" name="adres" value="{{ klient.adres }}" style="width: 475px;"><br>
     
         <label for="nr_tel">Numer telefonu</label><br>
-        <input type="text" id="nr_tel" name="nr_tel" placeholder="{{ klient.nr_tel }}" style="width: 475px;"><br>
+        <input type="text" id="nr_tel" name="nr_tel" value="{{ klient.nr_tel }}" style="width: 475px;"><br>
         
         <label for="adres_email">Adres email</label><br>
-        <input type="text" id="adres_email" name="adres_email" placeholder="{{ klient.adres_email }}" style="width: 475px;"><br>
+        <input type="text" id="adres_email" name="adres_email" value="{{ klient.adres_email }}" style="width: 475px;"><br>
 
         <label for="kto_oferta">Ofertę przygotowuje:</label><br>
         <select id="kto_oferta" name="kto_oferta" style="width: 475px;">
@@ -55,9 +55,10 @@
                 <th>Producent</th>
                 <th>Materiał</th>
                 <th>Typ</th>
-                <th>Długość [cm]</th>
-                <th>Szerokość [cm]</th>
-                <th>Grubość [cm]</th>
+                <th>Dł [cm]</th>
+                <th>Szer [cm]</th>
+                <th>Gr [cm]</th>
+                <th>Ilość</th>
                 <th>Cena</th>
                 <th>Cena po rabacie [zł]</th>
                 <th>Obróbka</th>
@@ -73,9 +74,10 @@
                 <td>{{ produkt.dlugosc }}</td>
                 <td>{{ produkt.szerokosc }}</td>
                 <td>{{ produkt.grubosc }}</td>
+                <td>{{ produkt.ilosc }}</td>
                 <td>{{ '%.2f' % produkt.cena_przed_rabatem() }}</td>
                 <td>{{ '%.2f' % produkt.cena_po_rabacie() }}</td>
-                <td>{{ produkt.obrobki | join(', ') }}</td>
+                <td>{{ produkt.obrobki_z_cenami() | join(', ') }}</td>
                 <td>{{ '%.2f' % produkt.cena_obrobek() }}</td>
 
             </tr>
@@ -161,6 +163,7 @@
 
 
     <script>
+
         function togglePriceField(service) {
             var id_map = {
                 'pomiar_transport_montaz': 'pomiar_transport_montaz_cena',
@@ -197,7 +200,7 @@
 </div>
 <div class="resetbutton">
     <form action="{{ url_for('reset_strony') }}" method="post" style="text-align: center; margin-top: 50px;">
-        <button type="submit">Reset strony</button>
+        <button type="submit">Wyloguj</button>
     </form>
     <br><br>
 </div>
