@@ -29,21 +29,21 @@ tiny_style = ParagraphStyle(
 
 right_normal_style = ParagraphStyle(
     name='RightNormal',
-    fontName='DejaVu', 
+    fontName='DejaVu',
     alignment=TA_RIGHT
 )
 
 right_align_style = ParagraphStyle(
     name='RightAlign',
     fontName='DejaVu',
-    fontSize=15, 
+    fontSize=15,
     alignment=TA_RIGHT
 )
 
 laczna_style = ParagraphStyle(
     name='Laczna',
     fontName='DejaVu',
-    fontSize=11, 
+    fontSize=11,
     alignment=TA_LEFT
 )
 
@@ -52,7 +52,7 @@ image_path = r"static/images/header.jpg"
 
 def generuj_PDF_klient(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_transport, usluga_montaz, cena_ppmmtt, cena_pomiaruu, cena_transportt, cena_montazuu, custom_obrobki=None):
     # Tworzenie dokumentu PDF
-    buffer = io.BytesIO()    
+    buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0, leftMargin=10, rightMargin=10, bottomMargin=40)
 
     # Pobranie szerokości strony
@@ -60,7 +60,7 @@ def generuj_PDF_klient(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_tra
 
     # Wczytanie obrazka o pełnej szerokości strony
     img = Image(image_path, width=page_width, height=page_width * 0.06)
-    
+
 
     # Style tekstu
     styles = getSampleStyleSheet()
@@ -112,7 +112,7 @@ def generuj_PDF_klient(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_tra
 
     if max_rabat > 0:
         rabat_paragraph = Paragraph(f"<b>Uwzględniono rabat:</b> {max_rabat:.0f}%", styles['Normal'])
-        elements.insert(3, rabat_paragraph) 
+        elements.insert(3, rabat_paragraph)
         elements.insert(4, Spacer(1, 10))
 
 
@@ -209,7 +209,7 @@ def generuj_PDF_klient(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_tra
         ('FONTSIZE', (0, 0), (-1, -1), 9)
 
     ]))
-    
+
     cena_ppmmtt = float(cena_ppmmtt or 0)
     cena_pomiaruu = float(cena_pomiaruu or 0)
     cena_transportt = float(cena_transportt or 0)
@@ -218,20 +218,20 @@ def generuj_PDF_klient(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_tra
 
     laczna_cena_uslug = cena_pomiaruu + cena_transportt + cena_montazuu + cena_ppmmtt
 
- 
+
     techniczne_info_text = """
-    Tolerancja wymiarowa:<br/> 
-    Tolerancja elementów ciętych wynosi ±2mm na stronę; tolerancja pomiarowa wynosi ±3–4mm na stronę; 
+    Tolerancja wymiarowa:<br/>
+    Tolerancja elementów ciętych wynosi ±2mm na stronę; tolerancja pomiarowa wynosi ±3–4mm na stronę;
     tolerancja montażowa wynosi ±5mm na stronę, tolerancja grubości materiału wynosi 2mm (±2mm).<br/><br/>
 
     Techniczne warunki realizacji zamówienia:<br/>
     - przed wykonaniem pomiaru i montażu meble kuchenne muszą być ustawione na swoich miejscach i wypoziomowane<br/>
     - do pomiaru i montażu wszystkie urządzenia AGD powinny stać na swoich miejscach<br/>
     - w przypadku braku przygotowania warunków do pomiaru i montażu blatów zastrzegamy sobie prawo do naliczenia dodatkowych kosztów
-    związanych z dodatkowym pomiarem i montażem
-    - w przypadku zamówienia blatu, gdzie łączenie blatu jest na linii otworu, Zamawiający ma obowiązek wykonania podpory części newralgicznych blatu
+    związanych z dodatkowym pomiarem i montażem. W przypadku zamówienia blatu, gdzie łączenie blatu jest na linii otworu, Zamawiający ma
+    obowiązek wykonania podpory części newralgicznych blatu
     z płyty meblowej, aby blat nie uległ uszkodzeniu. W przypadku zamówienia blatu w grubości 1,2 cm konieczne jest wykonanie pełnej podbudowy.<br/><br/>
-    
+
     Materiały wykonane z kamienia naturalnego należy zaimpregnować. Informacji na temat impregnacji wybranego materiału należy zasięgnąć podczas montażu
     lub u sprzedawcy. Kamień czarny, satynowany przed impregnacją ma odcień jaśniejszy niż na próbce, aby nadać mu ciemniejszy odcień i zabezpieczyć przed
     plamieniem, należy użyć impregnatu Transformer Max firmy Akemi zgodnie z instrukcją znajdującą się na opakowaniu.<br/><br/>

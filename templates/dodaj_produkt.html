@@ -11,7 +11,7 @@
 
     <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" style="width:100%; height:auto;">
 
-    
+
     <h1>Dodaj produkt do zamówienia</h1>
     <form action="{{ url_for('dodaj_produkt') }}" method="post">
         <table>
@@ -22,7 +22,7 @@
                     <th>Typ</th>
                     <th>Długość [cm]</th>
                     <th>Szerokość [cm]</th>
-                    <th>Grubość [cm]</th>      
+                    <th>Grubość [cm]</th>
                     <th>Rabat [%]</th>
                     <th>Obróbka</th>
                     <th>Ilość</th>
@@ -55,7 +55,7 @@
                         <select name="grubosc_{{ loop.index0 }}" required>
                             <option value="{{ produkt.grubosc }}" selected>{{ produkt.grubosc }}</option>
                         </select>
-                    </td>                   
+                    </td>
                     <td><input type="number" name="rabat_{{ loop.index0 }}" value="{{ produkt.rabat if produkt.rabat is defined else 0 }}" min="0" max="100"></td>
                     <td><button type="button" class="addObrobka" data-row-id="{{ loop.index0 }}">Dodaj obróbkę</button></td>
                     <input type="hidden" name="obrobki_{{ loop.index0 }}" value="{{ produkt.obrobki | join(', ') }}">
@@ -92,7 +92,7 @@
         <br><br><br>
         <button type="submit">Zatwierdź zamówienie</button>
     </form>
-    
+
     <div id="obrobkaModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black; min-width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000;">
         <div class="modal-close" id="closeObrobkaModal">&times;</div>
         <h2>Dodaj obróbkę</h2>
@@ -101,24 +101,24 @@
     </div>
 
     <script>
-        
+
         const materials = {
             "O rety parapety": [
-                "Ariston", "Botticino", "Baltic Grey", "Beige Marfil", "Bianco Ghiaccio", "Bianco Neve", "Breccia Aurora", "Calacatta", "Ceniza Pearl", "Madra Perla", "Misty White", "Nero Portoro", 
+                "Ariston", "Botticino", "Baltic Grey", "Beige Marfil", "Bianco Ghiaccio", "Bianco Neve", "Breccia Aurora", "Calacatta", "Ceniza Pearl", "Madra Perla", "Misty White", "Nero Portoro",
                 "Perlato Appia", "Polare", "Rosa Del Garda", "Royal Beige"
 
             ],
             "Olgran": [
-                "Super White", "Balmoral", "Bianco", "Strzeblów", "Strzegom", "Strzelin", "Bohus Grey", "Red", "Brąz Królewski", "Classic Brown", "Dark Grey", "Impala Marikana Dark", "Kashmir", 
-                "Colonial", "Valley", "Winter", "Coffee Brown", "Magma Gold", "Titanium Gold", "New Dark Grey", "Oscuro", "Titanium", "Forest", "Silver Paradiso", "Nero Assoluto", "Premium Black", 
-                "Nero Assoluto Satyna", "Premium Black Satyna", "Saida", "Santorini", "Spring Falls", "Star Gate", "Steel Grey Lappato", "Shivakashi", "Honey Dew", "Tan Brown", "Tołkowski", "Vanga", 
-                "Wiscount White", "Bianco Carrara", "Brecia Sarda", "Crema Marfil", "New Marfil", "Ambiente Light", "Angela Premium (CPW)", "Brilliant Black", "Calacatta Olympos", "Calacatta Silva", 
-                "Crystal Absolute White", "Crystal Anthracite", "Crystal Polar White", "Gobi Grey", "Noble Carrara", "Noble Quarzite", "Noble Concrete Grey", "Stardust (Desert Silver)", "Vera Gold", 
-                "Adamantium", "Artemis", "Elysium", "Polaris Gold", "Ocean"
+                "Super White", "Balmoral", "Bianco", "Strzeblów", "Strzegom", "Strzelin", "Bohus Grey", "Red", "Brąz Królewski", "Classic Brown", "Dark Grey", "Impala Marikana Dark", "Kashmir",
+                "Colonial", "Valley", "Winter", "Coffee Brown", "Magma Gold", "Titanium Gold", "New Dark Grey", "Oscuro", "Titanium", "Forest", "Silver Paradiso", "Nero Assoluto", "Premium Black",
+                "Nero Assoluto Satyna", "Premium Black Satyna", "Saida", "Santorini", "Spring Falls", "Star Gate", "Steel Grey Lappato", "Shivakashi", "Honey Dew", "Tan Brown", "Tołkowski", "Vanga",
+                "Wiscount White", "Bianco Carrara", "Brecia Sarda", "Crema Marfil", "New Marfil", "Ambiente Light", "Angela Premium (CPW)", "Brilliant Black", "Calacatta Olympos", "Calacatta Silva",
+                "Crystal Absolute White", "Crystal Anthracite", "Crystal Polar White", "Gobi Grey", "Noble Carrara", "Noble Quarzite", "Noble Concrete Grey", "Stardust (Desert Silver)", "Vera Gold",
+                "Adamantium", "Artemis", "Elysium", "Polaris Gold", "Ocean", "Taj Mahal"
             ],
             "Imperial": [
-                "Nero Antico", "Nero Satyna", "Nero Via Lactea", "Star Galaxy", "Steel Grey", "Altamonte", "Glencoe", "Bronze Coast", "Atlas Gold", "Atlas White", "Pico", "Atlas Gold Mat", "Cappucino", 
-                "Golden Dawn", "Nestos", "Maple Gaze", "Galactic Halo", "Venus Glow", "Imagine Grey", "Noble Areti Bianco", "Noble Supreme White", "Noble Pro Frost", "Taj Mahal (konglomerat kwarcowy)", 
+                "Nero Antico", "Nero Satyna", "Nero Via Lactea", "Star Galaxy", "Steel Grey", "Altamonte", "Glencoe", "Bronze Coast", "Atlas Gold", "Atlas White", "Pico", "Atlas Gold Mat", "Cappucino",
+                "Golden Dawn", "Nestos", "Maple Gaze", "Galactic Halo", "Venus Glow", "Imagine Grey", "Noble Areti Bianco", "Noble Supreme White", "Noble Pro Frost", "Taj Mahal (konglomerat kwarcowy)",
                 "Taj Mahal Mat (konglomerat kwarcowy)", "Taj Mahal", "Negresco"
             ],
             "Stolarz": [
@@ -146,7 +146,7 @@
             "Coral Clay Suede", "Lime Delight Suede", "Charcoal Soapstone Suede", "Brasil", "White Ocean", "Dolomite Grey", "Emerald Dream", "Marmi Lava", "Madrea Green",
             "India Pearl", "Arctic Storm", "Alpine Blue"
         ];
-        
+
         const forma_dekton = [
             "Eter", "Danae", "Kairos", "Kira", "Sabbia", "Trilium", "Grigio", "Grafite", "Ava", "Marmorio", "Nebbia", "Nebu", "Sandik",
                 "Kelya", "Kreta", "Sirius", "Laos", "Soke", "Zenit", "Aura", "Entzo", "Laurent", "Rem", "Arga", "Albarium", "Bergen", "Helena", "Taga", "Zenith", "State", "Nerok",
@@ -154,7 +154,7 @@
         ];
 
         const thicknesses = {};
-        
+
         let customObrobkaIndex = {{ custom_obrobki|length if custom_obrobki else 0 }};
 
 
@@ -325,12 +325,12 @@
                 <td>
                     <select name="grubosc_${datalistId}" required>
                     </select>
-                </td>     
+                </td>
                 <td><input type="number" name="rabat_${datalistId}" value="0" min="0" max="100"></td>
                 <td><button type="button" class="addObrobka" data-row-id="${datalistId}">Dodaj obróbkę</button></td>
                 <td><input type="number" name="ilosc_${datalistId}" value="1" required></td>
                 <td><button type="button" class="removeRow">Usuń</button></td>
-            `; 
+            `;
 
             if (rowCount > 0) {
                 const lastRow = table.rows[rowCount - 1]; // Pobranie przedostatniego wiersza
@@ -357,7 +357,7 @@
                 // Przepisanie wartości dla "grubosc"
                 const prevGrubosc = lastRow.querySelector("select[name^='grubosc']");
                 const newGrubosc = newRow.querySelector("select[name^='grubosc']");
-                
+
                 [...newGrubosc.options].forEach(option => {
                     option.selected = option.value === prevGrubosc.value;
                 });
@@ -418,20 +418,20 @@
             const row = document.querySelector(`tr[data-row-id='${rowId}']`);
             let producent = row.querySelector("select[name^='producent']").value.toLowerCase().replace(/\s+/g, '');
             let typ = row.querySelector("select[name^='typ']").value.toLowerCase();
-            let material = row.querySelector("input[name^='material']").value;    
+            let material = row.querySelector("input[name^='material']").value;
 
             const obrobkaList = document.getElementById("obrobkaList");
-            obrobkaList.innerHTML = ""; 
+            obrobkaList.innerHTML = "";
 
             const hiddenInput = row.querySelector("input[name^='obrobki_']");
-            const selectedMap = {};  
+            const selectedMap = {};
             if (hiddenInput && hiddenInput.value) {
-            hiddenInput.value
-                .split(", ")
-                .forEach(item => {
-                const [name, count] = item.split(":");
-                selectedMap[name.trim()] = count ? parseInt(count, 10) : null;
-                });
+                hiddenInput.value
+                    .split(", ")
+                    .forEach(item => {
+                        const [name, count] = item.split(":");
+                        selectedMap[name.trim().toLowerCase()] = count ? parseInt(count, 10) : null;
+                    });
             }
             console.log("selected obrobki map:", selectedMap);
 
@@ -502,7 +502,7 @@
                         quantity.style.width = "40px";
                         quantity.style.marginLeft = "10px";
 
-       
+
                         quantity.addEventListener("input", () => {
                             const aktualnaIlosc = parseFloat(quantity.value) || 1;
                             const nowaCena = policzCeneObrobki(obrobka, producent, aktualnaIlosc, dlugosc, szerokosc);
@@ -517,7 +517,7 @@
                     obrobkaList.appendChild(div);
                 });
             };
-            
+
             if (obrobkiMap[producent]) {
                 const allObrobki = obrobkiMap[producent];
 
@@ -542,17 +542,17 @@
                     const allObrobki = obrobkiMap["oretyparapety"];
 
                     const obrobkaPodstawowa = [
-                        "Cięcie po skosie", 
-                        "Otwór nablatowy", 
-                        "Otwór bateria", 
-                        "Otwór syfon", 
-                        "Wycięcie narożnika", 
-                        "Wycięcie narożnika (poler)", 
+                        "Cięcie po skosie",
+                        "Otwór nablatowy",
+                        "Otwór bateria",
+                        "Otwór syfon",
+                        "Wycięcie narożnika",
+                        "Wycięcie narożnika (poler)",
                         "Podpoler"
                     ];
 
                     const blatyLazienkowe = [
-                        "Odpływ", 
+                        "Odpływ",
                         "Umywalka nablatowa"
                     ];
 
@@ -568,7 +568,7 @@
                     createCategorySection("Blaty łazienkowe - obróbka", blatyLazienkowe);
                 } else if (producent == "formasystem") {
                     let kategoria = null;
-                    
+
                     if (forma_technistone.includes(material)) {
                         kategoria = "1";
                     } else if (forma_dekton.includes(material)) {
@@ -579,11 +579,11 @@
                         cokoliki = [], otwory = [], rowki_ociekaczy = [], rodzaje_wyciec = [],
                         zlewozmywaki2 = [], profile_krawedzi2 = [], rodzaje_podklejek_blatow2 = [],
                         ociekacz_szlif_cokolik = [], otwory2 = [], rodzaje_wyciec2 = [], inne = [], blaty_lazienkowe2 = [];
-                        
+
                     if (kategoria === "1") {
                         zlewozmywak = ["ZLEWOZMYWAK KLEJONY Z KONGLOMERATU KWARCOWEGO", "ZLEWOZMYWAK KLEJONY Z KONGLOMERATU KWARCOWEGO + KOREK AUTOMATYCZNY"];
-                        profile_krawedzi = ["Krawędzie fazowane", "Ćwierćwałek", "Połwałek", "Szeroka faza góra i dół", "Krawędzie zaokrągloine, góra i dół", "Krawędzie: ścięcie od dołu", "Krawędzie: ścięcie od góry", "Krawędź ozdobna", "DODATKOWY POLER lub SZLIF POWIERZCHNI"];
-                        rodzaje_podklejek_blatow = ["Klejenie - kanapka", "Klejenie - kanapka z fazą", "Podklejka 45 stopni + zawinięcie", "Podklejka 45 stopni", "Podklejka 45 stopni + podklejenie pianką", "Podklejka 45 stopni + zawinięcie 45 stopni"];
+                        profile_krawedzi = ["Krawędzie fazowane", "Ćwierćwałek", "Połwałek", "Szeroka faza góra i dół", "Krawędzie zaokrągloine, góra i dół", "Krawędzie ścięcie od dołu", "Krawędzie ścięcie od góry", "Krawędź ozdobna", "DODATKOWY POLER lub SZLIF POWIERZCHNI"];
+                        rodzaje_podklejek_blatow = ["Klejenie kanapka", "Klejenie kanapka z fazą", "Podklejka 45 stopni", "Podklejka 45 stopni + zawinięcie 45 stopni", "Podklejka 45 stopni + zawinięcie", "Podklejka 45 stopni + podklejenie pianką"];
                         cokoliki = ["Cokolik do 10 cm wysokości", "Cokolik od 10 do 15 cm wysokości"];
                         otwory = ["Zlew nablatowy", "Płya grzewcza", "Umywalka nablatowa", "Zlew licowany", "Licowanie płyty", "Zlew podwieszany", "Umywalka podwieszana", "Zlew podwieszany i licowany od spodu", "Zlew podklejony z ukrytą krawędzią łączenia", "Wzmocnienia", "Bateria", "Korek", "Dozownik", "Filtr do wody", "Otwór mały do fi 3,5 cm", "Power-port", "Gniazdo elektryczne", "Odpływ umywalki"];
                         rowki_ociekaczy = ["Rowki ociekaczy", "Ociekacz", "Ociekacz z rowkami", "Frez na led", "Kapinos"];
@@ -600,10 +600,10 @@
                         createCategorySection("Rodzaje wycięć", rodzaje_wyciec);
                         if (inne.length) createCategorySection("Inne", inne);
 
-                    
+
                     } else if (kategoria === "2") {
                         zlewozmywaki2 = ["FORMA-INTEGRA CERAMIKA KOPERTA", "FORMA-INTEGRA CERAMIKA LINIOWY"];
-                        profile_krawedzi2 = ["Krawędzie fazowane SPIEK", "Szeroka faza", "Krawędzie: ścięcie od dołu SPIEK", "Szeroka faza góra i dół SPIEK"];
+                        profile_krawedzi2 = ["Krawędzie fazowane SPIEK", "Szeroka faza", "Krawędzie ścięcie od dołu SPIEK", "Szeroka faza góra i dół SPIEK"];
                         rodzaje_podklejek_blatow2 = ["Podklejka 45 stopni SPIEK", "Podklejka 45 stopni + zawinięcie 45 stopni SPIEK"];
                         ociekacz_szlif_cokolik = ["Ociekacz SPIEK", "Dodatkowy szlif powierzchni", "Cokolik do 10 cm wysokości SPIEK"];
                         otwory2 = ["Zlew nablatowy SPIEK", "Płya grzewcza SPIEK", "Umywalka nablatowa SPIEK", "Zlew licowany SPIEK", "Licowanie płyty SPIEK", "Zlew podwieszany SPIEK", "Umywalka podwieszana SPIEK", "Bateria SPIEK", "Korek SPIEK", "Dozownik SPIEK", "Filtr do wody SPIEK", "Otwór mały do fi 3,5 cm SPIEK", "Power-port SPIEK", "Gniazdo elektryczne SPIEK", "Odpływ umywalki SPIEK", "Frez na led SPIEK", "Kapinos SPIEK"];
@@ -616,10 +616,10 @@
                         createCategorySection("Rodzaje podklejek blatów na długości", rodzaje_podklejek_blatow2);
                         createCategorySection("Ociekacz, szlif, cokolik", ociekacz_szlif_cokolik);
                         createCategorySection("Otwory", otwory2);
-                        createCategorySection("Rodzaje wycięć", rodzaje_wyciec2);                        
-    
+                        createCategorySection("Rodzaje wycięć", rodzaje_wyciec2);
+
                         if (inne.length) createCategorySection("Inne", inne);
-                    
+
                     } else {
                         createCategorySection("Inne", Object.keys(allObrobki));
                         console.log("Nie sa w kategorii")
@@ -628,7 +628,7 @@
 
                 } else if (producent == "formasystem"){
                     createCategorySection("", Object.keys(allObrobki));
-                
+
                 } else if (producent === "olgran" || producent === "imperial") {
                     const otwory = ["Bateria", "Power-port", "Gniazdo elektryczne", "Płyta grzewcza", "Zlew podwieszany", "Licowanie płyty", "Wzmocnienie otworu", "Zlew nablatowy", "Zlew licowany"];
                     const dodatkiBlaty = ["Ociekacz","Paski na ociekaczu", "Paski na ociekaczu - komplet", "Podklejka z cięciem", "Cięcie 45 ST", "Kaliblator LED", "Impregnacja", "Cieniowanie materiału", "Podpoler do 10 cm", "Podpoler ponad 10 cm", "Szczotkowanie"];
@@ -641,7 +641,7 @@
                     createCategorySection("Parapety / blaty obróbka", parapetyBlaty);
                     createCategorySection("Blaty łazienkowe - obróbka", blatylazienkowe);
                     if (inne.length) {
-                        createCategorySection("Inne", inne); 
+                        createCategorySection("Inne", inne);
                     } else {
                         Object.keys(allObrobki).forEach(obrobka => {
                         const div = document.createElement("div");
@@ -710,39 +710,39 @@
                     [900, 1030, 1160, 1230],
                     [990, 1150, 1240, 1430]
                 ];
-            
+
                 const mb = dlugosc / 100;
                 const kolumna = Math.round(grubosc) - 3;
                 const wiersz = Math.ceil(szerokosc / 10) - 2;
-            
+
                 if (wiersz < 0 || kolumna < 0 || wiersz >= tabelka_stolarz.length || kolumna >= tabelka_stolarz[0].length) return 0;
-            
+
                 return tabelka_stolarz[wiersz][kolumna] * mb;
             }
-            
+
             function policzCeneObrobki(obrobka, producent, ilosc, dlugosc, szerokosc, grubosc, cenaProduktu = null) {
                 const dane = obrobkiMap?.[producent]?.[obrobka];
                 if (!dane) return null;
-            
+
                 const mb = dlugosc / 100;
                 const m2 = (dlugosc / 100) * (szerokosc / 100);
                 const jednostka = dane.jednostka;
                 const cena = dane.cena;
-            
+
                 if ((producent === "stolarz") && ["lakier", "nieregularne kształty"].includes(obrobka.toLowerCase())) {
                     const cenaMaterialu = obliczCeneStolarz(dlugosc, szerokosc, grubosc);
                     return Math.round(0.3 * cenaMaterialu);
 
                 }
-            
+
                 switch (jednostka) {
                     case "ilosc": return Math.round(cena * ilosc);
                     case "mb": return Math.round(cena * mb);
                     case "m2": return Math.round(cena * m2);
                     default: return null;
                 }
-            
-            
+
+
             }
 
             document.getElementById("obrobkaModal").style.display = "block";
@@ -752,7 +752,7 @@
         document.getElementById("zapiszObrobki").addEventListener("click", function () {
             const selectedObrobki = [];
 
-        
+
             // Przechodzimy po wszystkich checkboxach w modalu
             document.querySelectorAll("#obrobkaList input[type='checkbox']").forEach(checkbox => {
                 if (!checkbox.checked) return;
@@ -792,7 +792,7 @@
             document.getElementById("obrobkaModal").style.display = "none";
             document.getElementById("modalBackdrop").style.display = "none";
         });
-        
+
 
         // Obsługa przycisku anulowania
         document.getElementById("closeObrobkaModal").addEventListener("click", function () {
@@ -803,13 +803,13 @@
         function pokazTabeleObrobek() {
             const tabela = document.getElementById("customObrobkiTable");
             const naglowek = document.getElementById("customObrobkiHeader");
-        
+
             tabela.style.display = "table";
             naglowek.style.display = "block";
             dodajWierszCustomObrobki();
         }
 
-        
+
     </script>
 
     <br>
