@@ -9,7 +9,6 @@
 </head>
 
 <body>
-    <!-- Obraz na górze strony -->
     <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" style="width:100%; height:auto;">
 
     <div class="tresc_strony">
@@ -17,13 +16,13 @@
     <form action="/aktualizuj_klienta" method="POST">
         <label for="imie">Imię i nazwisko</label><br>
         <input type="text" id="imie" name="imie" value="{{ klient.imie }}" style="width: 475px;"><br>
-    
+
         <label for="adres">Adres zamieszkania</label><br>
         <input type="text" id="adres" name="adres" value="{{ klient.adres }}" style="width: 475px;"><br>
-    
+
         <label for="nr_tel">Numer telefonu</label><br>
         <input type="text" id="nr_tel" name="nr_tel" value="{{ klient.nr_tel }}" style="width: 475px;"><br>
-        
+
         <label for="adres_email">Adres email</label><br>
         <input type="text" id="adres_email" name="adres_email" value="{{ klient.adres_email }}" style="width: 475px;"><br>
 
@@ -34,7 +33,7 @@
             <option value="Piotr Pielowski" {% if klient.kto_oferta == 'Piotr Pielowski' %}selected{% endif %}>Piotr Pielowski</option>
             <option value="Przemysław Kowalczyk" {% if klient.kto_oferta == 'Przemysław Kowalczyk' %}selected{% endif %}>Przemysław Kowalczyk</option>
         </select><br>
-        
+
         <h3>Ważność wyceny</h3>
         <label for="dni">Dni:</label>
         <input type="number" id="dni" name="dni" value="{{ klient.dni }}" min="0" style="width: 60px;">
@@ -84,7 +83,7 @@
             {% endfor %}
         </tbody>
     </table>
-    
+
     {% endif %}
 
     {% if custom_obrobki %}
