@@ -3,6 +3,7 @@ import math
 from flask_login import LoginManager, login_user, logout_user, UserMixin, current_user
 import json
 import os
+import pickle
 
 app = Flask(__name__)
 def wczytaj_ceny_obrobek():
@@ -258,7 +259,25 @@ class Formasystem(Producent):
             return cena * m2
         return 0
 
+producenty = {
+    "Stolarz": Stolarz,
+    "O rety parapety": Oretyparapety,
+    "Olgran": Olgran,
+    "Imperial": Imperial,
+    "Forma system": Formasystem
+}
+def get_zamowienie_from_session():
+    return Zamowienie.from_dict(session.get("zamowienie", Zamowienie().to_dict()))
 
+def save_zamowienie_to_session(zamowienie):
+    session["zamowienie"] = zamowienie.to_dict()
+
+def get_klient_from_session():
+    data = session.get("klient")
+    return Klient.from_dict(data) if isinstance(data, dict) else Klient()
+
+def save_klient_to_session(klient):
+    session["klient"] = klient.to_dict()
 
 class Produkt:
     def __init__(self, dlugosc, szerokosc, grubosc, ilosc, typ, material, producent, obrobki=None, rabat=0):
@@ -342,12 +361,36 @@ class Produkt:
             wynik[nazwa]["cena_jednostkowa"] = round(cena, 2)
 
         return [(nazwa, dane["ilosc"], dane["cena_jednostkowa"]) for nazwa, dane in wynik.items()]
+    
+    def to_dict(self):
+        return {
+            "dlugosc": self.dlugosc,
+            "szerokosc": self.szerokosc,
+            "grubosc": self.grubosc,
+            "ilosc": self.ilosc,
+            "typ": self.typ,
+            "material": self.material,
+            "producent": self.producent.nazwa,
+            "obrobki": self.obrobki,
+            "rabat": self.rabat
+        }
+    
+    @classmethod
+    def from_dict(cls, data, producent):
+        return cls(
+            dlugosc=data["dlugosc"],
+            szerokosc=data["szerokosc"],
+            grubosc=data["grubosc"],
+            ilosc=data["ilosc"],
+            typ=data["typ"],
+            material=data["material"],
+            producent=producent,
+            obrobki=data.get("obrobki", []),
+            rabat=data.get("rabat", 0)
+        )
 
 
-usluga_pomiar=False
-usluga_transport=False
-usluga_montaz=False
-usluga_pmt=False
+
 
 class Zamowienie:
     def __init__(self):
@@ -359,6 +402,23 @@ class Zamowienie:
 
     def laczna_cena(self):
         return sum([produkt.cena() + produkt.cena_obrobek() for produkt in self.lista_produktow])
+    
+    def to_dict(self):
+        return {
+            "lista_produktow": [p.to_dict() for p in self.lista_produktow],
+            "wlasne_obrobki": self.wlasne_obrobki
+        }
+    @classmethod
+    def from_dict(cls, data):
+        obj = cls()
+        for produkt_data in data.get("lista_produktow", []):
+            producent_klasa = producenty.get(produkt_data["producent"], Stolarz)
+            produkt = Produkt.from_dict(produkt_data, producent_klasa())
+            obj.lista_produktow.append(produkt)
+        obj.wlasne_obrobki = data.get("wlasne_obrobki", [])
+        return obj
+    
+    
 
 
 class Klient:
@@ -389,20 +449,49 @@ class Klient:
         self.tygodnie = tygodnie
         self.miesiace = miesiace
 
+    def to_dict(self):
+        return {
+            "imie": self.imie,
+            "adres": self.adres,
+            "nr_tel": self.nr_tel,
+            "adres_email": self.adres_email,
+            "kto_oferta": self.kto_oferta,
+            "lista_zamowien": [z.to_dict() for z in self.lista_zamowien],
+            "dni": self.dni,
+            "tygodnie": self.tygodnie,
+            "miesiace": self.miesiace
+        }
 
+    @classmethod
+    def from_dict(cls, data):
+        obj = cls()
+        obj.imie = data.get("imie", "")
+        obj.adres = data.get("adres", "")
+        obj.nr_tel = data.get("nr_tel", "")
+        obj.adres_email = data.get("adres_email", "")
+        obj.kto_oferta = data.get("kto_oferta", "")
+        obj.dni = data.get("dni", 0)
+        obj.tygodnie = data.get("tygodnie", 0)
+        obj.miesiace = data.get("miesiace", 0)
+        for zamowienie_dict in data.get("lista_zamowien", []):
+            obj.lista_zamowien.append(Zamowienie.from_dict(zamowienie_dict))
+        return obj
 
-klient = Klient()
-# dodaj klienta
+def get_klient_from_session():
+    data = session.get("klient")
+    if isinstance(data, dict):
+        return Klient.from_dict(data)
+    return Klient()
+
 
 app.secret_key = "hfe9hf9wh"
-zamowienie = Zamowienie()
-producenty = {
-    "Stolarz": Stolarz,
-    "O rety parapety": Oretyparapety,
-    "Olgran": Olgran,
-    "Imperial": Imperial,
-    "Forma system": Formasystem
-}
+
+@app.before_request
+def init_session_once():
+    if "zamowienie" not in session:
+        save_zamowienie_to_session(Zamowienie())
+    if "klient" not in session:
+        save_klient_to_session(Klient())
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -423,10 +512,6 @@ def load_user(user_id):
         return User(user_id)
     return None
 
-cena_transportt = ""
-cena_montazuu = ""
-cena_pomiaruu = ""
-cena_ppmmtt = ""
 
 
 @app.before_request
@@ -439,49 +524,46 @@ def require_login():
 def ustaw_cookie_jako_sesyjny():
     session.permanent = False
 
-# @app.route("/wyczysc_sesje", methods=["POST"])
-# def wyczysc_sesje():
-#     session.clear()
-#     return "", 204
 
 @app.route("/uslugi", methods=["POST"])
 def uslugi():
-    global usluga_transport, usluga_pomiar, usluga_montaz, usluga_pmt
-    global cena_transportt, cena_pomiaruu, cena_montazuu, cena_ppmmtt
 
-    usluga_transport = "transport" in request.form
-    usluga_pomiar = "pomiar" in request.form
-    usluga_montaz = "montaz" in request.form
-    usluga_pmt = "pomiar_transport_montaz" in request.form
+    session["usluga_transport"] = "transport" in request.form
+    session["usluga_pomiar"] = "pomiar" in request.form
+    session["usluga_montaz"] = "montaz" in request.form
+    session["usluga_pmt"] = "pomiar_transport_montaz" in request.form
 
-    cena_pomiaruu = request.form.get("cena_pomiaru", "")
-    cena_transportt = request.form.get("cena_transportu", "")
-    cena_montazuu = request.form.get("cena_montazu", "")
-    cena_ppmmtt = request.form.get("cena_ppmmtt", "")
+    session["cena_pomiaruu"] = request.form.get("cena_pomiaru", "")
+    session["cena_transportt"] = request.form.get("cena_transportu", "")
+    session["cena_montazuu"] = request.form.get("cena_montazu", "")
+    session["cena_ppmmtt"] = request.form.get("cena_ppmmtt", "")
 
     return redirect(url_for("strona_glowna"))
 
 
 @app.route("/", methods=["POST", "GET"])
 def strona_glowna():
-    custom_obrobki = zamowienie.wlasne_obrobki if hasattr(zamowienie, "wlasne_obrobki") else []
+    zamowienie = get_zamowienie_from_session()
+    klient = get_klient_from_session()
+
     return render_template("strona_glowna.html.j2",
         zamowienie=zamowienie,
         klient=klient,
         laczna_cena_z_uslugami=0.0,
-        usluga_pomiar=usluga_pomiar,
-        usluga_montaz=usluga_montaz,
-        usluga_transport=usluga_transport,
-        usluga_pmt=usluga_pmt,
-        cena_pomiaruu=cena_pomiaruu,
-        cena_montazuu=cena_montazuu,
-        cena_transportt=cena_transportt,
-        cena_ppmmtt=cena_ppmmtt,
-        custom_obrobki=custom_obrobki)
-
+        usluga_pomiar = session.get("usluga_pomiar", False),
+        usluga_montaz = session.get("usluga_montaz", False),
+        usluga_transport = session.get("usluga_transport", False),
+        usluga_pmt = session.get("usluga_pmt", False),
+        cena_montazuu=session.get('cena_montazuu', 0),
+        cena_pomiaruu=session.get('cena_pomiaruu', 0),
+        cena_transportt=session.get('cena_transportt', 0),
+        cena_ppmmtt=session.get('cena_ppmmtt', 0),
+        custom_obrobki=zamowienie.wlasne_obrobki)
 
 @app.route("/aktualizuj_klienta", methods=["POST"])
 def aktualizuj_klienta():
+    klient = get_klient_from_session() 
+
     klient.aktualizuj_dane(
         imie=request.form.get("imie"),
         adres=request.form.get("adres"),
@@ -492,32 +574,20 @@ def aktualizuj_klienta():
         tygodnie=int(request.form.get("tygodnie", 2)),
         miesiace=int(request.form.get("miesiace", 0))
     )
+    session["klient"] = klient.to_dict()
     return redirect(url_for("strona_glowna"))
-
 
 
 @app.route('/dodaj_produkt', methods=['GET', 'POST'])
 def dodaj_produkt():
-    global zamowienie
-
-    if 'zamowienie' not in globals():
-        zamowienie = Zamowienie()
-    custom_obrobki = zamowienie.wlasne_obrobki if hasattr(zamowienie, "wlasne_obrobki") else []
-
-    if not hasattr(zamowienie, 'lista_produktow'):
-        zamowienie.lista_produktow = []
+    zamowienie = get_zamowienie_from_session()
 
     if request.method == "POST":
-        print("Otrzymane dane formularza:", request.form)
-
         produkty = {}
         for klucz, wartosc in request.form.items():
             if "_" in klucz:
                 pole, id_ = klucz.rsplit("_", 1)
-                if id_ not in produkty:
-                    produkty[id_] = {}
-                produkty[id_][pole] = wartosc
-
+                produkty.setdefault(id_, {})[pole] = wartosc
 
         paczki_produktow = []
         for id_, dane in produkty.items():
@@ -531,7 +601,6 @@ def dodaj_produkt():
                     "szerokosc": float(dane.get("szerokosc", "0").replace(",", ".")),
                     "grubosc": float(dane.get("grubosc", 0)),
                     "ilosc": int(dane.get("ilosc", 0)),
-                    "obrobki": [o.strip() for o in request.form.get(f"obrobki_{id_}", "").split(",") if o.strip()],
                     "obrobki_z_iloscia": {
                         o.split(":")[0].strip(): int(o.split(":")[1]) if ":" in o else 1
                         for o in request.form.get(f"obrobki_{id_}", "").split(",") if o.strip()
@@ -541,14 +610,12 @@ def dodaj_produkt():
             except ValueError as e:
                 print(f"Błąd w danych produktu {id_}: {e}")
 
-        zamowienie.lista_produktow = []
+        nowa_lista = []
 
         for produkt_data in paczki_produktow:
             try:
                 producent = producenty.get(produkt_data["producent"], Stolarz)()
-                obrobki_rozwiniete = []
-                for nazwa, ilosc in produkt_data["obrobki_z_iloscia"].items():
-                    obrobki_rozwiniete.append("{}:{}".format(nazwa, ilosc))
+                obrobki_rozwiniete = [f"{n}:{i}" for n, i in produkt_data["obrobki_z_iloscia"].items()]
 
                 produkt = Produkt(
                     producent=producent,
@@ -561,22 +628,11 @@ def dodaj_produkt():
                     ilosc=produkt_data["ilosc"],
                     obrobki=obrobki_rozwiniete
                 )
-                zamowienie.dodaj_produkt(produkt)
-
-                print(f"Dodano produkt: {produkt.__dict__}")
+                nowa_lista.append(produkt)
             except Exception as e:
                 print(f"Błąd podczas dodawania produktu: {produkt_data}, {e}")
 
-
-        for produkt in zamowienie.lista_produktow:
-            try:
-                grubosc_float = float(produkt.grubosc)
-                if grubosc_float.is_integer():
-                    produkt.grubosc = int(grubosc_float)
-                else:
-                    produkt.grubosc = grubosc_float
-            except (ValueError, TypeError):
-                pass
+        zamowienie.lista_produktow = nowa_lista
 
         nowe_obrobki = []
         for key, value in request.form.items():
@@ -585,22 +641,24 @@ def dodaj_produkt():
                 nazwa = value.strip()
                 try:
                     cena = float(request.form.get(f"custom_obrobka_cena_{index}", "0").replace(",", "."))
+                    if nazwa:
+                        nowe_obrobki.append({"nazwa": nazwa, "cena": cena})
                 except ValueError:
-                    cena = 0.0
-                if nazwa:
-                    nowe_obrobki.append({"nazwa": nazwa, "cena": cena})
+                    pass
 
         zamowienie.wlasne_obrobki = nowe_obrobki
+        save_zamowienie_to_session(zamowienie)
+
         return redirect(url_for("strona_glowna"))
 
+    # GET
     obrobki_data = {}
-    sciezka = r"data/obrobki"
+    sciezka = "data/obrobki"
     if os.path.exists(sciezka):
         for plik in os.listdir(sciezka):
-            print(plik)
-            if plik.endswith('.json'):
-                producent = plik.replace('.json', '').replace('obrobki_', '')
-                with open(os.path.join(sciezka, plik), 'r', encoding='utf-8') as f:
+            if plik.endswith(".json"):
+                producent = plik.replace(".json", "").replace("obrobki_", "")
+                with open(os.path.join(sciezka, plik), "r", encoding="utf-8") as f:
                     try:
                         obrobki_data[producent] = json.load(f)
                     except json.JSONDecodeError:
@@ -623,17 +681,17 @@ from flask import request, Response
 def pdf():
 
     pdf_buffer = generuj_PDF(
-        zamowienie,
-        klient,
-        usluga_pomiar=usluga_pomiar,
-        usluga_transport=usluga_transport,
-        usluga_montaz=usluga_montaz,
-        usluga_pmt=usluga_pmt,
-        cena_pomiaruu=cena_pomiaruu,
-        cena_montazuu=cena_montazuu,
-        cena_ppmmtt=cena_ppmmtt,
-        cena_transportt=cena_transportt,
-        custom_obrobki=zamowienie.wlasne_obrobki
+        Zamowienie.from_dict(session['zamowienie']),
+        Klient.from_dict(session['klient']),
+        usluga_pomiar = session.get("usluga_pomiar", False),
+        usluga_montaz = session.get("usluga_montaz", False),
+        usluga_transport = session.get("usluga_transport", False),
+        usluga_pmt = session.get("usluga_pmt", False),
+        cena_montazuu=session.get('cena_montazuu', 0),
+        cena_pomiaruu=session.get('cena_pomiaruu', 0),
+        cena_transportt=session.get('cena_transportt', 0),
+        cena_ppmmtt=session.get('cena_ppmmtt', 0),
+        custom_obrobki=Zamowienie.from_dict(session['zamowienie']).wlasne_obrobki
     )
 
     return Response(pdf_buffer, mimetype="application/pdf",
@@ -646,43 +704,32 @@ from flask import request, Response
 def pdf_klient():
 
     pdf_buffer = generuj_PDF_klient(
-        zamowienie,
-        klient,
-        usluga_pomiar=usluga_pomiar,
-        usluga_transport=usluga_transport,
-        usluga_montaz=usluga_montaz,
-        usluga_pmt=usluga_pmt,
-        cena_pomiaruu=cena_pomiaruu,
-        cena_montazuu=cena_montazuu,
-        cena_ppmmtt=cena_ppmmtt,
-        cena_transportt=cena_transportt,
-        custom_obrobki=zamowienie.wlasne_obrobki
+        Zamowienie.from_dict(session['zamowienie']),
+        Klient.from_dict(session['klient']),        
+        usluga_pomiar = session.get("usluga_pomiar", False),
+        usluga_montaz = session.get("usluga_montaz", False),
+        usluga_transport = session.get("usluga_transport", False),
+        usluga_pmt = session.get("usluga_pmt", False),
+        cena_montazuu=session.get('cena_montazuu', 0),
+        cena_pomiaruu=session.get('cena_pomiaruu', 0),
+        cena_transportt=session.get('cena_transportt', 0),
+        cena_ppmmtt=session.get('cena_ppmmtt', 0),
+        custom_obrobki=Zamowienie.from_dict(session['zamowienie']).wlasne_obrobki
     )
 
     return Response(pdf_buffer, mimetype="application/pdf",
                     headers={"Content-Disposition": "inline; filename=wycena_klient.pdf"})
 
+@app.before_request
+def usun_blednego_klienta_jesli_bytes():
+    if isinstance(session.get("klient"), bytes):
+        print("Usuwam klienta typu bytes z sesji!")
+        session.pop("klient", None)
+
 @app.route('/reset_strony', methods=['POST'])
 def reset_strony():
-    global zamowienie, klient
-    global usluga_pomiar, usluga_transport, usluga_montaz, usluga_pmt
-    global cena_pomiaruu, cena_montazuu, cena_ppmmtt, cena_transportt
-
     session.clear()
-
-    zamowienie = Zamowienie()
-    klient = Klient()
-    usluga_pomiar = False
-    usluga_transport = False
-    usluga_montaz = False
-    usluga_pmt = False
-
-    cena_pomiaruu = ""
-    cena_transportt = ""
-    cena_montazuu = ""
-    cena_ppmmtt = ""
-
-    return redirect(url_for('strona_glowna'))
+    return redirect(url_for('login'))
 
 
 
@@ -695,6 +742,18 @@ def login():
         if user and user['password'] == password:
             login_user(User(username))
             flash('Zalogowano pomyślnie!')
+            zamowienie = Zamowienie()
+            session['zamowienie'] = zamowienie.to_dict()
+
+            session["klient"] = Klient().to_dict()
+            session["usluga_pomiar"]=False
+            session["usluga_transport"]=False
+            session["usluga_montaz"]=False
+            session["usluga_pmt"]=False
+            session["cena_pomiaruu"]=0
+            session["cena_transportt"]=0
+            session["cena_montazuu"]=0
+            session["cena_ppmmtt"]=0
             return redirect(url_for('strona_glowna'))
         else:
             flash('Nieprawidłowy login lub hasło.')

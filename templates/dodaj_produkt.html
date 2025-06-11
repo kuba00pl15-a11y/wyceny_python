@@ -450,7 +450,7 @@
                     checkbox.type = "checkbox";
                     checkbox.value = obrobka;
                     checkbox.id = `obrobka_${obrobka}`;
-                    if (selectedMap.hasOwnProperty(obrobka)) checkbox.checked = true;
+                    if (selectedMap.hasOwnProperty(obrobka.toLowerCase())) checkbox.checked = true;
 
                     const label = document.createElement("label");
                     label.htmlFor = checkbox.id;
@@ -466,8 +466,8 @@
 
                     const jednostka = jednostkiObrobek[obrobka];
                     let countForCalc = ilosc;
-                    if (jednostka === "ilosc" && selectedMap[obrobka] != null) {
-                    countForCalc = selectedMap[obrobka];
+                    if (jednostka === "ilosc" && selectedMap[obrobka.toLowerCase()] != null) {
+                    countForCalc = selectedMap[obrobka.toLowerCase()];
                     }
                     const cena = policzCeneObrobki(obrobka, producent, countForCalc, dlugosc, szerokosc, grubosc);
 
@@ -498,7 +498,7 @@
                         const quantity = document.createElement("input");
                         quantity.type = "number";
                         quantity.min = 1;
-                        quantity.value = selectedMap[obrobka] || 1;
+                        quantity.value = selectedMap[obrobka.toLowerCase()] || 1;
                         quantity.style.width = "40px";
                         quantity.style.marginLeft = "10px";
 
@@ -678,7 +678,7 @@
                             const quantity = document.createElement("input");
                             quantity.type = "number";
                             quantity.min = 1;
-                            quantity.value = selectedMap[obrobka] || 1;
+                            quantity.value = selectedMap[obrobka.toLowerCase()] || 1;
                             quantity.style.width = "40px";
                             quantity.style.marginLeft = "10px";
 
