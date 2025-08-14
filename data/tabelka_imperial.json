@@ -1,7 +1,7 @@
 {
     "Nero Antico": [1750, 1850, 1800, 2000],
     "Nero Satyna": [1750, 1850, 1800, 2000],
-    "Nero Via Lactea": [1500, 1850, 1550, 1900],
+    "Nero Via Lactea": [1650, 1950, 1650, 1950],
     "Star Galaxy": [1500, 1850, 1550, 1900],
     "Steel Grey": [935, 1230, 935, 1230],
     "Altamonte": [2700, 0, 2700, 0],
@@ -23,6 +23,9 @@
     "Noble Pro Frost": [2200, 0, 2200, 0],
     "Taj Mahal (konglomerat kwarcowy)": [2830, 0, 2830, 0],
     "Taj Mahal Mat (konglomerat kwarcowy)": [2910, 0, 2910, 0],
-    "Taj Mahal": [3020, 0, 3020, 0],
+    "Technistone Taj Mahal (konglomerat kwarcowy)": [2860, 0, 2860, 0],
+    "Technistone Taj Mahal Mat (konglomerat kwarcowy)": [2990, 0, 2990, 0],
+    "Technistone Mistral White": [2860, 0, 2860, 0],
+    "Taj Mahal": [3700, 0, 3700, 0],
     "Negresco": [2200, 0, 2200, 0]
 }
