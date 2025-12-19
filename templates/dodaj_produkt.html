@@ -33,11 +33,11 @@
                 <tr data-row-id="{{ loop.index0 }}">
                     <td>
                         <select name="producent_{{ loop.index0 }}" required onchange="updateMaterials(this)">
-                            <option value="Stolarz" {% if produkt.producent.nazwa == "Stolarz" %}selected{% endif %}>Stolarz</option>
-                            <option value="O rety parapety" {% if produkt.producent.nazwa == "O rety parapety" %}selected{% endif %}>O rety parapety</option>
-                            <option value="Olgran" {% if produkt.producent.nazwa == "Olgran" %}selected{% endif %}>Olgran</option>
-                            <option value="Imperial" {% if produkt.producent.nazwa == "Imperial" %}selected{% endif %}>Imperial</option>
                             <option value="Forma system" {% if produkt.producent.nazwa == "Forma system" %}selected{% endif %}>Forma system</option>
+                            <option value="Imperial" {% if produkt.producent.nazwa == "Imperial" %}selected{% endif %}>Imperial</option>
+                            <option value="Olgran" {% if produkt.producent.nazwa == "Olgran" %}selected{% endif %}>Olgran</option>
+                            <option value="O rety parapety" {% if produkt.producent.nazwa == "O rety parapety" %}selected{% endif %}>O rety parapety</option>
+                            <option value="Stolarz" {% if produkt.producent.nazwa == "Stolarz" %}selected{% endif %}>Stolarz</option>
                         </select>
                     </td>
                     <td>
@@ -127,30 +127,30 @@
             ],
             "Forma system": [
                 "Elegance Eco Nev", "Gobi Grey", "Crystal Royal", "Gobi Black", "Taurus Black", "Crystal Diamond", "Starlight Black", "Crystal Absolute White", "Crystal Polar White",
-                "Noble Carrara", "Noble Concrete Grey", "Noble Ivory White", "Noble Pro Frost", "Noble Quartzite", "Nobe Athos Brown", "Noble Linea", "Noble Areti Bianco", "Noble Imperial Grey",
+                "Noble Carrara", "Noble Concrete Grey", "Noble Ivory White", "Noble Pro Frost", "Noble Quartzite", "Nobe Athos Brown", "Noble Linea", "Noble Areti Bianco", "Mistral White", "Noble Imperial Grey",
                 "Noble Supreme White", "Ambiente Light", "Crystal Calacatta Silva", "Glencoe", "Calacatta Olympos", "Mystery White", "Blanco Maple", "Coral Clay", "Negro Tebas", "Linen Cream",
                 "Motion Grey", "Desert Silver", "Lagoon", "Snowy Ibiza", "Persian White", "Siberian Frost", "Blanco Zeus", "Eternal Statuario", "White Arabesque", "Eternal Calacatta Gold",
                 "Ethereal Glow", "Charcoal Soapstone", "Et. Noir", "Rivere Rose", "Blanc Eysee", "Versailles Invory", "Parisien Blue", "Negro Tebas Suede", "Desert Silver Suede",
                 "Coral Clay Suede", "Lime Delight Suede", "Charcoal Soapstone Suede", "Brasil", "White Ocean", "Dolomite Grey", "Emerald Dream", "Marmi Lava", "Madrea Green",
                 "India Pearl", "Arctic Storm", "Alpine Blue", "Eter", "Danae", "Kairos", "Kira", "Sabbia", "Trilium", "Grigio", "Grafite", "Ava", "Marmorio", "Nebbia", "Nebu", "Sandik",
-                "Kelya", "Kreta", "Sirius", "Laos", "Soke", "Zenit", "Aura", "Entzo", "Laurent", "Rem", "Arga", "Albarium", "Bergen", "Helena", "Taga", "Zenith", "State", "Nerok",
-                "Novam", "Zephyr"
+                "Kelya", "Kreta", "Sirius", "Laos", "Soke", "Aura", "Entzo", "Laurent", "Rem", "Arga", "Albarium", "Bergen", "Helena", "Taga", "Zenith", "State", "Nerok",
+                "Novam", "Zephyr", "Linen Cream Suede"
             ]
         };
 
         const forma_technistone = [
             "Elegance Eco Nev", "Gobi Grey", "Crystal Royal", "Gobi Black", "Taurus Black", "Crystal Diamond", "Starlight Black", "Crystal Absolute White", "Crystal Polar White",
             "Noble Carrara", "Noble Concrete Grey", "Noble Ivory White", "Noble Pro Frost", "Noble Quartzite", "Nobe Athos Brown", "Noble Linea", "Noble Areti Bianco", "Noble Imperial Grey",
-            "Noble Supreme White", "Ambiente Light", "Crystal Calacatta Silva", "Glencoe", "Calacatta Olympos", "Mystery White", "Blanco Maple", "Coral Clay", "Negro Tebas", "Linen Cream",
+            "Noble Supreme White", "Ambiente Light", "Crystal Calacatta Silva", "Glencoe", "Calacatta Olympos", "Mystery White", "Blanco Maple", "Coral Clay", "Negro Tebas", "Linen Cream Suede", "Linen Cream",
             "Motion Grey", "Desert Silver", "Lagoon", "Snowy Ibiza", "Persian White", "Siberian Frost", "Blanco Zeus", "Eternal Statuario", "White Arabesque", "Eternal Calacatta Gold",
             "Ethereal Glow", "Charcoal Soapstone", "Et. Noir", "Rivere Rose", "Blanc Eysee", "Versailles Invory", "Parisien Blue", "Negro Tebas Suede", "Desert Silver Suede",
             "Coral Clay Suede", "Lime Delight Suede", "Charcoal Soapstone Suede", "Brasil", "White Ocean", "Dolomite Grey", "Emerald Dream", "Marmi Lava", "Madrea Green",
-            "India Pearl", "Arctic Storm", "Alpine Blue"
+            "India Pearl", "Arctic Storm", "Alpine Blue", "Mistral White"
         ];
 
         const forma_dekton = [
             "Eter", "Danae", "Kairos", "Kira", "Sabbia", "Trilium", "Grigio", "Grafite", "Ava", "Marmorio", "Nebbia", "Nebu", "Sandik",
-                "Kelya", "Kreta", "Sirius", "Laos", "Soke", "Zenit", "Aura", "Entzo", "Laurent", "Rem", "Arga", "Albarium", "Bergen", "Helena", "Taga", "Zenith", "State", "Nerok",
+                "Kelya", "Kreta", "Sirius", "Laos", "Soke", "Aura", "Entzo", "Laurent", "Rem", "Arga", "Albarium", "Bergen", "Helena", "Taga", "Zenith", "State", "Nerok",
                 "Novam", "Zephyr"
         ];
 
@@ -184,7 +184,7 @@
                 } else if (company === "Stolarz") {
                     thickness = [3.0, 4.0, 5.0, 6.0];
                 } else if (company === "Forma system") {
-                    thickness = [1.2, 2.0]
+                    thickness = [2.0, 1.2]
                 }
 
                 if (!thicknesses[material]) {
@@ -237,12 +237,44 @@
         }
 
 
+        // ZASTĄP istniejący listener "input" poniższym kodem
         document.addEventListener("input", function (event) {
-            if (event.target.name.startsWith("material")) {
+            // Obsługa zmian w polu "material"
+            if (event.target.name && event.target.name.startsWith("material")) {
                 const row = event.target.closest("tr");
+
+                // 1) Aktualizuj grubość (zachowujemy Twoją dotychczasową logikę)
                 updateThickness(row);
+
+                // 2) Jeśli pole materiału zostało wyczyszczone, odbuduj datalistę dla bieżącego producenta
+                const materialValue = event.target.value.trim();
+                const producentSelect = row.querySelector("select[name^='producent']");
+                const materialInput = row.querySelector("input[name^='material']");
+                const datalist = row.querySelector("datalist");
+
+                if (materialValue === "") {
+                    // Wywołaj updateMaterials z zeruj = false, żeby odświeżyć datalistę (i nie nadpisywać już pustego inputu)
+                    // jeśli chcesz aby usunięcie pola ustawiało domyślnie "Dąb" dla Stolarza, możesz użyć true zamiast false
+                    updateMaterials(producentSelect, false);
+
+                    // Jeżeli datalistka ma elementy - ustaw focus, żeby dropdown mógł być od razu otwarty przez użytkownika (na niektórych przeglądarkach)
+                    if (datalist && datalist.children.length > 0) {
+                        // na niektórych przeglądarkach trzeba dać lekkie opóźnienie, żeby focus zadziałał
+                        setTimeout(() => {
+                            materialInput.focus();
+                            // Próba otwarcia natywnego dropdown (nie zawsze działa w każdej przeglądarce)
+                            try { materialInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+                        }, 0);
+                    }
+                } else {
+                    // 3) Jeśli użytkownik wpisuje tekst — filtruj datalistę jak wcześniej
+                    if (datalist) {
+                        filterMaterials(materialInput, datalist.id);
+                    }
+                }
             }
         });
+
 
         function updateMaterials(selectElement, zeruj = true) {
             const row = selectElement.closest("tr");
@@ -278,7 +310,7 @@
 
             const typeSelect = row.querySelector("select[name^='typ']");
             typeSelect.innerHTML = "";
-            ["Parapet", "Blat"].forEach(function (type) {
+            ["Blat", "Parapet"].forEach(function (type) {
                 const option = document.createElement("option");
                 option.value = type;
                 option.textContent = type;
@@ -309,11 +341,11 @@
             newRow.innerHTML = `
                 <td>
                     <select name="producent_${datalistId}" required onchange="updateMaterials(this)">
-                        <option value="Stolarz">Stolarz</option>
-                        <option value="O rety parapety">O rety parapety</option>
-                        <option value="Olgran">Olgran</option>
-                        <option value="Imperial">Imperial</option>
                         <option value="Forma system">Forma system</option>
+                        <option value="Imperial">Imperial</option>
+                        <option value="Olgran">Olgran</option>
+                        <option value="O rety parapety">O rety parapety</option>
+                        <option value="Stolarz">Stolarz</option>
                     </select>
                 </td>
                 <td>
@@ -371,11 +403,11 @@
             } else {
                 // Przepisanie wartości dla "producent"
                 const newProducent = newRow.querySelector("select[name^='producent']");
-                newProducent.value = "Stolarz";
+                newProducent.value = "Forma system";
 
                 // Przepisanie wartości dla "material"
                 const newMaterial = newRow.querySelector(`input[name^='material']`);
-                newMaterial.value = "Dąb";
+                newMaterial.value = "";
 
 
                 updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
@@ -632,7 +664,7 @@
                     createCategorySection("", Object.keys(allObrobki));
 
                 } else if (producent === "olgran" || producent === "imperial") {
-                    const otwory = ["Bateria", "Power-port", "Gniazdo elektryczne", "Płyta grzewcza", "Zlew podwieszany", "Licowanie płyty", "Wzmocnienie otworu", "Zlew nablatowy", "Zlew licowany"];
+                    const otwory = ["Zlew podwieszany", "Zlew nablatowy", "Bateria", "Płyta grzewcza", "Power-port", "Gniazdo elektryczne", "Licowanie płyty", "Wzmocnienie otworu", "Zlew licowany"];
                     const dodatkiBlaty = ["Ociekacz","Paski na ociekaczu", "Paski na ociekaczu - komplet", "Podklejka z cięciem", "Cięcie 45 ST", "Kaliblator LED", "Impregnacja", "Cieniowanie materiału", "Podpoler do 10 cm", "Podpoler ponad 10 cm", "Szczotkowanie"];
                     const parapetyBlaty = ["Kapinos", "Zaokrąglenie do R3", "Zaokrąglenie do R10", "Zaokrąglenie do R25", "Zaokrąglenie do R50", "Półwałek", "Ćwierćwałek", "Ćwierćwałek blatowy", "Ćwierćwałek profilowany", "Faza okrągła", "Obróbka prosta", "Cięcie po łuku", "Waterjet cięcie", "Fazowanie płytek"];
                     const blatylazienkowe = ["Odpływ", "Umywalka nablatowa", "Umywalka podwieszana"];
