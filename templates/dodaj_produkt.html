@@ -161,7 +161,8 @@
         const thicknesses = {};
 
         let customObrobkaIndex = {{ custom_obrobki|length if custom_obrobki else 0 }};
-
+        // Unique incrementing id for rows to avoid re-using ids after removals
+        let nextRowId = document.querySelectorAll('#productTable tr').length;
 
         function dodajWierszCustomObrobki() {
             const table = document.getElementById("customObrobkiTable").querySelector("tbody");
@@ -366,11 +367,16 @@
                 const tbody = document.getElementById("productTable");
                 if (!tbody) { console.error('productTable not found'); return; }
 
-                const rowCount = tbody.querySelectorAll('tr').length;
+                const rows = tbody.querySelectorAll('tr');
+                const rowCount = rows.length;
                 const newRow = document.createElement('tr');
-                newRow.dataset.rowId = rowCount; // Przypisz unikalny identyfikator
 
-                const datalistId = newRow.dataset.rowId; // Unikalne ID dla nowego wiersza
+                // Use incrementing id to ensure uniqueness even after deletions
+                const datalistId = nextRowId++;
+                newRow.dataset.rowId = datalistId; // Przypisz unikalny identyfikator
+
+                // For copying values, use last row if present
+                const lastRow = rows[rowCount - 1];
 
                 newRow.innerHTML = `
                     <td>
@@ -418,6 +424,29 @@
                     const prevRabat = lastRow.querySelector("input[name^='rabat']");
                     const newRabat = newRow.querySelector("input[name^='rabat']");
                     if (prevRabat && newRabat) newRabat.value = prevRabat.value;
+
+                    // Przepisanie typu (populujemy najpierw opcje)
+                    const prevTyp = lastRow.querySelector("select[name^='typ']");
+                    const newTyp = newRow.querySelector("select[name^='typ']");
+                    // Upewnij się, że opcje dla typu istnieją
+                    updateMaterials(newProducent, false);
+                    if (prevTyp && newTyp) newTyp.value = prevTyp.value;
+
+                    // Przepisanie grubości
+                    const prevGrubosc = lastRow.querySelector("select[name^='grubosc']");
+                    const newGrubosc = newRow.querySelector("select[name^='grubosc']");
+                    updateThickness(newRow);
+                    if (prevGrubosc && newGrubosc) newGrubosc.value = prevGrubosc.value;
+
+                    // Przepisanie ilości
+                    const prevIlosc = lastRow.querySelector("input[name^='ilosc']");
+                    const newIlosc = newRow.querySelector("input[name^='ilosc']");
+                    if (prevIlosc && newIlosc) newIlosc.value = prevIlosc.value;
+
+                    // Przepisanie obróbek (ukryte pole)
+                    const prevObrobki = lastRow.querySelector("input[name^='obrobki_']");
+                    const newObrobki = newRow.querySelector("input[name^='obrobki_']");
+                    if (prevObrobki && newObrobki) newObrobki.value = prevObrobki.value;
 
                 } else {
                     // Default initial values

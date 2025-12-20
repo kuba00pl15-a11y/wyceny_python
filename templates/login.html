@@ -12,24 +12,43 @@
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
   </head>
-  <body>
-    <div class="container">
-      <h2>Zaloguj się</h2>
-      <form method="POST" class="login-form">
+  <body class="login-page">
+    <div class="container login-container">
+      <h2 class="login-title">Zaloguj się</h2>
+      <form method="POST" class="login-form" aria-label="Formularz logowania">
         <div id="rubryki_login">
           <div class="input-group">
-            <input type="text" name="username" placeholder="Login" required />
-          </div>
-          <div class="input-group">
+            <label for="username">Login</label>
             <input
-              type="password"
-              name="password"
-              placeholder="Hasło"
+              id="username"
+              type="text"
+              name="username"
+              placeholder="wpisz login"
               required
             />
           </div>
+          <div class="input-group">
+            <label for="password">Hasło</label>
+            <input
+              id="password"
+              type="password"
+              name="password"
+              placeholder="wpisz hasło"
+              required
+            />
+          </div>
+          <div class="form-row">
+            <div style="flex: 1; text-align: left">
+              <label class="remember"
+                ><input type="checkbox" name="remember" /> Zapamiętaj
+                mnie</label
+              >
+            </div>
+          </div>
           <div class="button-group">
-            <button type="submit">Zaloguj</button>
+            <button type="submit" class="btn btn--primary btn--full">
+              Zaloguj
+            </button>
           </div>
         </div>
       </form>

@@ -399,6 +399,78 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:foc
 
 .pole-cena { margin-top: 10px; margin-bottom: 10px; }
 
+/* Center the login container vertically and horizontally with a single light color and subtle pattern */
+.login-page {
+    position: relative;
+    min-height: 100vh;                  /* full viewport height */
+    display: flex;
+    align-items: center;                /* vertical centering */
+    justify-content: center;            /* horizontal centering */
+    padding: 28px;                      /* breathing room on small screens */
+    overflow: hidden;
+    background-color: #f7fbff;          /* single light color */
+    /* Subtle repeating dot pattern */
+    background-image: radial-gradient(rgba(0,0,0,0.03) 1px, rgba(0,0,0,0) 1px);
+    background-size: 18px 18px;
+}
+
+/* Slightly different constraints for the login container only */
+.login-container {
+    position: relative; /* keep above background */
+    z-index: 2;
+    width: 100%;
+    max-width: 540px;                   /* a bit larger as requested */
+    padding: 36px;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 12px 30px rgba(15,23,42,0.12);
+    border-radius: 12px;
+    text-align: left;
+}
+
+.login-title { margin: 0 0 18px 0; font-size: 22px; color: #0f172a; }
+
+.login-container label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #374151;
+    font-size: 14px;
+}
+
+.login-container .input-group { margin-bottom: 14px; }
+
+.login-container input[type="text"],
+.login-container input[type="password"] {
+    width: 100%;
+    min-height: 48px;                  /* consistent height */
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #e6e9ee;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
+}
+
+.login-container input[type="text"]:focus,
+.login-container input[type="password"]:focus {
+    outline: none;
+    border-color: #4b7bec;
+    box-shadow: 0 8px 20px rgba(75,123,236,0.08);
+    transform: translateY(-1px);
+}
+
+/* full width button */
+.btn--full { width: 100%; padding: 12px 18px; font-size: 16px; border-radius: 8px; }
+
+.remember { font-size: 13px; color: #475569; }
+
+@media (max-width: 520px) {
+    .login-container { max-width: 100%; padding: 22px; }
+    /* simplify background on small screens */
+    .login-page { background-image: none; }
+}
+
+
 .reset-form { text-align: center; margin-top: 36px; }
 
 .code-editor {
@@ -426,17 +498,18 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:foc
 .product-table th { background: #f1f5f9; }
 
 /* Column width tuning: make 'Materiał' slightly narrower, keep table balanced */
-.product-table th:nth-child(1), .product-table td:nth-child(1) { width: 14%; }
-.product-table th:nth-child(2), .product-table td:nth-child(2) { width: 20%; padding-left: 12px; }
+.product-table th:nth-child(1), .product-table td:nth-child(1) { width: 12%; }
+.product-table th:nth-child(2), .product-table td:nth-child(2) { width: 13%; padding-left: 12px; }
 .product-table th:nth-child(3), .product-table td:nth-child(3) { width: 8%; }
-.product-table th:nth-child(4), .product-table td:nth-child(4) { width: 8%; }
-.product-table th:nth-child(5), .product-table td:nth-child(5) { width: 8%; }
-.product-table th:nth-child(6), .product-table td:nth-child(6) { width: 8%; }
-.product-table th:nth-child(7), .product-table td:nth-child(7) { width: 6%; }
-.product-table th:nth-child(8), .product-table td:nth-child(8) { width: 10%; padding-left: 12px; }
-.product-table th:nth-child(9), .product-table td:nth-child(9) { width: 6%; }
+.product-table th:nth-child(4), .product-table td:nth-child(4) { width: 10%; }
+.product-table th:nth-child(5), .product-table td:nth-child(5) { width: 10%; }
+.product-table th:nth-child(6), .product-table td:nth-child(6) { width: 10%; }
+.product-table th:nth-child(7), .product-table td:nth-child(7) { width: 8%; }
+.product-table th:nth-child(8), .product-table td:nth-child(8) { width: 8%; padding-left: 12px; }
+.product-table th:nth-child(9), .product-table td:nth-child(9) { width: 4%; }
 
-.product-table td input[type="text"], .product-table td select, .product-table td input[type="number"] { width: 100%; box-sizing: border-box; }
+
+.product-table td input[type="text"], .product-table td select, .product-table td input[type="number"] { width: 80%; box-sizing: border-box; }
 
 @media (max-width: 720px) {
     .product-table th, .product-table td { font-size: 13px; padding: 6px 8px; }

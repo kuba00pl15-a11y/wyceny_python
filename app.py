@@ -665,9 +665,17 @@ def dodaj_produkt():
             except ValueError as e:
                 print(f"Błąd w danych produktu {id_}: {e}")
 
+        # Filter out incomplete products and log them
+        przefiltrowane = []
+        for p in paczki_produktow:
+            if not p.get('producent') or not p.get('material') or not p.get('typ') or int(p.get('ilosc', 0)) <= 0:
+                print(f"Pomijam niekompletne dane produktu: {p}")
+                continue
+            przefiltrowane.append(p)
+
         nowa_lista = []
 
-        for produkt_data in paczki_produktow:
+        for produkt_data in przefiltrowane:
             try:
                 producent = producenty.get(produkt_data["producent"], Stolarz)()
                 obrobki_rozwiniete = [f"{n}:{i}" for n, i in produkt_data["obrobki_z_iloscia"].items()]
@@ -687,7 +695,11 @@ def dodaj_produkt():
             except Exception as e:
                 print(f"Błąd podczas dodawania produktu: {produkt_data}, {e}")
 
-        zamowienie.lista_produktow = nowa_lista
+        # Only overwrite existing list if we parsed at least one valid product
+        if nowa_lista:
+            zamowienie.lista_produktow = nowa_lista
+        else:
+            print('Brak poprawnych produktów w żądaniu — nie nadpisuję listy produktów w sesji.')
 
         nowe_obrobki = []
         for key, value in request.form.items():
