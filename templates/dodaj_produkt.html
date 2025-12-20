@@ -9,12 +9,13 @@
 
 <body>
 
-    <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" style="width:100%; height:auto;">
+    <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" class="site-header">
 
 
     <h1>Dodaj produkt do zamówienia</h1>
     <form action="{{ url_for('dodaj_produkt') }}" method="post">
-        <table>
+        <div class="product-table-wrapper">
+        <table class="product-table">
             <thead>
                 <tr>
                     <th>Producent</th>
@@ -65,35 +66,38 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         <br>
-        <button type="button" id="addRow">Dodaj produkt</button>
+        <div class="form-actions">
+          <button type="button" id="addRow" class="btn btn--large">Dodaj produkt</button>
 
-        <h1 id="customObrobkiHeader" style="display: {{ 'block' if custom_obrobki else 'none' }};">Dodatkowe obróbki</h1>
-        <table id="customObrobkiTable" style="display: {{ 'table' if custom_obrobki else 'none' }};">
-            <thead>
-                <tr>
-                    <th>Nazwa obróbki</th>
-                    <th>Cena [zł]</th>
-                    <th>Usuń</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for obrobka in custom_obrobki %}
-                <tr>
-                    <td><input type="text" name="custom_obrobka_nazwa_{{ loop.index0 }}" value="{{ obrobka.nazwa }}" required></td>
-                    <td><input type="number" name="custom_obrobka_cena_{{ loop.index0 }}" value="{{ obrobka.cena }}" step="0.01" required></td>
-                    <td><button type="button" onclick="this.closest('tr').remove()">Usuń</button></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <br>
-        <button type="button" onclick="pokazTabeleObrobek()">Dodaj dodatkową obróbkę</button>
-        <br><br><br>
-        <button type="submit">Zatwierdź zamówienie</button>
-    </form>
+          <h1 id="customObrobkiHeader" class="{% if not custom_obrobki %}hidden{% endif %}">Dodatkowe obróbki</h1>
+          <table id="customObrobkiTable" class="{% if not custom_obrobki %}hidden{% endif %}">
+              <thead>
+                  <tr>
+                      <th>Nazwa obróbki</th>
+                      <th>Cena [zł]</th>
+                      <th>Usuń</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {% for obrobka in custom_obrobki %}
+                  <tr>
+                      <td><input type="text" name="custom_obrobka_nazwa_{{ loop.index0 }}" value="{{ obrobka.nazwa }}" required></td>
+                      <td><input type="number" name="custom_obrobka_cena_{{ loop.index0 }}" value="{{ obrobka.cena }}" step="0.01" required></td>
+                      <td><button type="button" onclick="this.closest('tr').remove()">Usuń</button></td>
+                  </tr>
+                  {% endfor %}
+              </tbody>
+          </table>
 
-    <div id="obrobkaModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black; min-width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000;">
+          <button type="button" class="btn btn--large btn-ghost" onclick="pokazTabeleObrobek()">Dodaj dodatkową obróbkę</button>
+
+          <button type="submit" class="btn btn--large btn--primary">Zatwierdź zamówienie</button>
+        </div>
+    </form>    
+
+    <div id="obrobkaModal">
         <div class="modal-close" id="closeObrobkaModal">&times;</div>
         <h2>Dodaj obróbkę</h2>
         <div id="obrobkaList"></div>
@@ -171,6 +175,32 @@
 
             table.appendChild(row);
             customObrobkaIndex++;
+            // Ensure the custom obróbki section is visible after adding
+            updateCustomObrobkiVisibility();
+        }
+
+        // Helpers to show/hide tables when empty
+        function updateProductTableVisibility() {
+            const tbody = document.getElementById('productTable');
+            const table = tbody ? tbody.closest('table') : null;
+            if (!tbody || tbody.querySelectorAll('tr').length === 0) {
+                if (table) table.classList.add('hidden');
+            } else {
+                if (table) table.classList.remove('hidden');
+            }
+        }
+
+        function updateCustomObrobkiVisibility() {
+            const table = document.getElementById('customObrobkiTable');
+            const header = document.getElementById('customObrobkiHeader');
+            const tbody = table ? table.querySelector('tbody') : null;
+            if (!tbody || tbody.querySelectorAll('tr').length === 0) {
+                if (table) table.classList.add('hidden');
+                if (header) header.classList.add('hidden');
+            } else {
+                if (table) table.classList.remove('hidden');
+                if (header) header.classList.remove('hidden');
+            }
         }
 
         for (const company in materials) {
@@ -331,98 +361,110 @@
         }
 
         document.getElementById("addRow").addEventListener("click", function () {
-            const table = document.getElementById("productTable");
-            const rowCount = table.rows.length;
-            const newRow = table.insertRow();
-            newRow.dataset.rowId = table.rows.length; // Przypisz unikalny identyfikator
+            try {
+                console.log('addRow clicked');
+                const tbody = document.getElementById("productTable");
+                if (!tbody) { console.error('productTable not found'); return; }
 
-            const datalistId = newRow.dataset.rowId; // Unikalne ID dla nowego wiersza
+                const rowCount = tbody.querySelectorAll('tr').length;
+                const newRow = document.createElement('tr');
+                newRow.dataset.rowId = rowCount; // Przypisz unikalny identyfikator
 
-            newRow.innerHTML = `
-                <td>
-                    <select name="producent_${datalistId}" required onchange="updateMaterials(this)">
-                        <option value="Forma system">Forma system</option>
-                        <option value="Imperial">Imperial</option>
-                        <option value="Olgran">Olgran</option>
-                        <option value="O rety parapety">O rety parapety</option>
-                        <option value="Stolarz">Stolarz</option>
-                    </select>
-                </td>
-                <td>
-                    <input type="text" name="material_${datalistId}" list="materialsList_${datalistId}" oninput="filterMaterials(this, 'materialsList_${datalistId}')" required>
-                    <datalist id="materialsList_${datalistId}"></datalist>
-                </td>
-                <td><select name="typ_${datalistId}" required></select></td>
-                <td><input type="text" name="dlugosc_${datalistId}" value="0" required></td>
-                <td><input type="text" name="szerokosc_${datalistId}" value="0" required></td>
-                <td>
-                    <select name="grubosc_${datalistId}" required>
-                    </select>
-                </td>
-                <td><input type="number" name="rabat_${datalistId}" value="0" min="0" max="100"></td>
-                <td><button type="button" class="addObrobka" data-row-id="${datalistId}">Dodaj obróbkę</button></td>
-                <td><input type="number" name="ilosc_${datalistId}" value="1" required></td>
-                <td><button type="button" class="removeRow">Usuń</button></td>
-            `;
+                const datalistId = newRow.dataset.rowId; // Unikalne ID dla nowego wiersza
 
-            if (rowCount > 0) {
-                const lastRow = table.rows[rowCount - 1]; // Pobranie przedostatniego wiersza
+                newRow.innerHTML = `
+                    <td>
+                        <select name="producent_${datalistId}" required onchange="updateMaterials(this)">
+                            <option value="Forma system">Forma system</option>
+                            <option value="Imperial">Imperial</option>
+                            <option value="Olgran">Olgran</option>
+                            <option value="O rety parapety">O rety parapety</option>
+                            <option value="Stolarz">Stolarz</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" name="material_${datalistId}" list="materialsList_${datalistId}" oninput="filterMaterials(this, 'materialsList_${datalistId}')" required>
+                        <datalist id="materialsList_${datalistId}"></datalist>
+                    </td>
+                    <td><select name="typ_${datalistId}" required></select></td>
+                    <td><input type="text" name="dlugosc_${datalistId}" value="0" required></td>
+                    <td><input type="text" name="szerokosc_${datalistId}" value="0" required></td>
+                    <td>
+                        <select name="grubosc_${datalistId}" required>
+                        </select>
+                    </td>
+                    <td><input type="number" name="rabat_${datalistId}" value="0" min="0" max="100"></td>
+                    <td><button type="button" class="addObrobka" data-row-id="${datalistId}">Dodaj obróbkę</button></td>
+                    <input type="hidden" name="obrobki_${datalistId}" value="">
+                    <td><input type="number" name="ilosc_${datalistId}" value="1" required></td>
+                    <td><button type="button" class="removeRow">Usuń</button></td>
+                `;
 
-                // Przepisanie wartości dla "producent"
-                const prevProducent = lastRow.querySelector("select[name^='producent']");
-                const newProducent = newRow.querySelector("select[name^='producent']");
-                newProducent.value = prevProducent.value;
+                // Copy values from last row if exists
+                if (rowCount > 0) {
+                    const lastRow = tbody.querySelectorAll('tr')[rowCount - 1];
 
-                // Przepisanie wartości dla "material"
-                const prevMaterial = lastRow.querySelector(`input[name^='material']`);
-                const newMaterial = newRow.querySelector(`input[name^='material']`);
-                newMaterial.value = prevMaterial.value;
+                    // Przepisanie wartości dla "producent"
+                    const prevProducent = lastRow.querySelector("select[name^='producent']");
+                    const newProducent = newRow.querySelector("select[name^='producent']");
+                    if (prevProducent && newProducent) newProducent.value = prevProducent.value;
 
-                updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
+                    // Przepisanie wartości dla "material"
+                    const prevMaterial = lastRow.querySelector(`input[name^='material']`);
+                    const newMaterial = newRow.querySelector(`input[name^='material']`);
+                    if (prevMaterial && newMaterial) newMaterial.value = prevMaterial.value;
 
-                // Przepisanie wartości dla "typ"
-                const prevTyp = lastRow.querySelector("select[name^='typ']");
-                const newTyp = newRow.querySelector("select[name^='typ']");
-                [...newTyp.options].forEach(option => {
-                    option.selected = option.value === prevTyp.value;
-                });
+                    // Przepisanie wartości dla "rabat"
+                    const prevRabat = lastRow.querySelector("input[name^='rabat']");
+                    const newRabat = newRow.querySelector("input[name^='rabat']");
+                    if (prevRabat && newRabat) newRabat.value = prevRabat.value;
 
-                // Przepisanie wartości dla "grubosc"
-                const prevGrubosc = lastRow.querySelector("select[name^='grubosc']");
-                const newGrubosc = newRow.querySelector("select[name^='grubosc']");
+                } else {
+                    // Default initial values
+                    const newProducent = newRow.querySelector("select[name^='producent']");
+                    if (newProducent) newProducent.value = "Forma system";
 
-                [...newGrubosc.options].forEach(option => {
-                    option.selected = option.value === prevGrubosc.value;
-                });
+                    const newMaterial = newRow.querySelector(`input[name^='material']`);
+                    if (newMaterial) newMaterial.value = "";
 
-                // Przepisanie wartości dla "rabat"
-                const prevRabat = lastRow.querySelector("input[name^='rabat']");
-                const newRabat = newRow.querySelector("input[name^='rabat']");
-                newRabat.value = prevRabat.value;
+                    updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
+                }
 
-            } else {
-                // Przepisanie wartości dla "producent"
-                const newProducent = newRow.querySelector("select[name^='producent']");
-                newProducent.value = "Forma system";
+                // Append row and update thickness/visibility
+                tbody.appendChild(newRow);
+                updateThickness(newRow);
+                updateProductTableVisibility();
+                console.log('row added, total rows:', tbody.querySelectorAll('tr').length);
 
-                // Przepisanie wartości dla "material"
-                const newMaterial = newRow.querySelector(`input[name^='material']`);
-                newMaterial.value = "";
-
-
-                updateMaterials(newProducent, false); // Najpierw generujemy opcje dla "typ"
-
+            } catch (err) {
+                console.error('Error adding row:', err);
             }
         });
 
         document.addEventListener("click", function(event) {
             if (event.target.classList.contains("removeRow")) {
                 event.target.closest("tr").remove();
+                // Update visibility after removal
+                updateProductTableVisibility();
             }
         });
 
         window.onload = function () {
             document.querySelectorAll("#productTable tr").forEach(row => updateThickness(row));
+            // Initial visibility sync
+            updateProductTableVisibility();
+            updateCustomObrobkiVisibility();
+
+            // Delegated listener: react to inline 'Usuń' button clicks inside customObrobki table
+            const customTbody = document.querySelector('#customObrobkiTable tbody');
+            if (customTbody) {
+                customTbody.addEventListener('click', function(e) {
+                    if (e.target && e.target.tagName === 'BUTTON') {
+                        // Inline onclick will remove the row first; schedule visibility update
+                        setTimeout(updateCustomObrobkiVisibility, 0);
+                    }
+                });
+            }
         };
 
 
@@ -445,8 +487,8 @@
         }
 
         function openObrobkaModal(rowId) {
-            document.getElementById("modalBackdrop").style.display = "block";
-            document.getElementById("obrobkaModal").style.display = "block";
+            document.getElementById("modalBackdrop").classList.add('show');
+            document.getElementById("obrobkaModal").classList.add('show');
 
             const row = document.querySelector(`tr[data-row-id='${rowId}']`);
             let producent = row.querySelector("select[name^='producent']").value.toLowerCase().replace(/\s+/g, '');
@@ -522,7 +564,7 @@
                         image.alt = `Obróbka ${obrobka}`;
                         image.style.maxWidth = "150px";
                         image.style.marginLeft = "10px";
-                        image.onerror = () => image.style.display = "none"; // ukryj, jeśli obrazek nie istnieje
+                        image.onerror = () => image.classList.add("hidden"); // ukryj, jeśli obrazek nie istnieje
                         div.appendChild(image)
                     }
 
@@ -679,7 +721,7 @@
                     } else {
                         Object.keys(allObrobki).forEach(obrobka => {
                         const div = document.createElement("div");
-                        div.style.display = "flex";
+                        div.classList.add('obrobka-row');
                         div.style.alignItems = "center";
                         div.style.marginBottom = "5px";
 
@@ -779,7 +821,8 @@
 
             }
 
-            document.getElementById("obrobkaModal").style.display = "block";
+            document.getElementById("modalBackdrop").classList.add('show');
+            document.getElementById("obrobkaModal").classList.add('show');
         }
 
         // Obsługa przycisku zapisu obróbek
@@ -823,23 +866,23 @@
                 console.log(hiddenInput.value);
             }
             console.log("Zapisano obróbki:", selectedObrobki);
-            document.getElementById("obrobkaModal").style.display = "none";
-            document.getElementById("modalBackdrop").style.display = "none";
+            document.getElementById("obrobkaModal").classList.remove('show');
+            document.getElementById("modalBackdrop").classList.remove('show');
         });
 
 
         // Obsługa przycisku anulowania
         document.getElementById("closeObrobkaModal").addEventListener("click", function () {
-            document.getElementById("obrobkaModal").style.display = "none";
-            document.getElementById("modalBackdrop").style.display = "none";
+            document.getElementById("obrobkaModal").classList.remove('show');
+            document.getElementById("modalBackdrop").classList.remove('show');
         });
 
         function pokazTabeleObrobek() {
             const tabela = document.getElementById("customObrobkiTable");
             const naglowek = document.getElementById("customObrobkiHeader");
 
-            tabela.style.display = "table";
-            naglowek.style.display = "block";
+            tabela.classList.remove('hidden');
+            naglowek.classList.remove('hidden');
             dodajWierszCustomObrobki();
         }
 
@@ -847,7 +890,10 @@
     </script>
 
     <br>
-    <button onclick="window.location.href='/';">Strona główna</button><br>
-    <div id="modalBackdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.5); backdrop-filter: blur(5px); z-index: 999;"></div>
+    <div class="form-actions form-actions--secondary">
+      <button onclick="window.location.href='/'" class="btn btn--large btn-ghost">Strona główna</button>
+    </div>
+
+    <div id="modalBackdrop" class="modal-overlay"></div>
 </body>
 </html>

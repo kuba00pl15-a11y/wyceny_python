@@ -13,11 +13,7 @@
       <h1>Edycja pliku: {{ file }}</h1>
       <form action="{{ url_for('admin_save') }}" method="post">
         <input type="hidden" name="file" value="{{ file }}" />
-        <textarea
-          name="content"
-          rows="30"
-          style="width: 100%; font-family: monospace"
-        >
+        <textarea name="content" rows="30" class="code-editor">
 {{ content }}</textarea
         >
         <br />

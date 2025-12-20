@@ -9,40 +9,57 @@
 </head>
 
 <body>
-    <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" style="width:100%; height:auto;">
+    <img src="{{ url_for('static', filename='images/header.jpg') }}" alt="Opis obrazu" class="site-header">
 
     <div class="tresc_strony">
-    <h1>Uzupełnij dane klienta</h1>
-    <form action="/aktualizuj_klienta" method="POST">
-        <label for="imie">Imię i nazwisko</label><br>
-        <input type="text" id="imie" name="imie" value="{{ klient.imie }}" style="width: 475px;"><br>
+    <h2 class="section-title">Uzupełnij dane klienta</h2>
+    <form action="/aktualizuj_klienta" method="POST" class="client-form">
+      <div class="client-info">
+        <div class="form-row">
+          <label for="imie">Imię i nazwisko</label>
+          <input type="text" id="imie" name="imie" value="{{ klient.imie }}" class="form-control form-control--compact">
+        </div>
 
-        <label for="adres">Adres zamieszkania</label><br>
-        <input type="text" id="adres" name="adres" value="{{ klient.adres }}" style="width: 475px;"><br>
+        <div class="form-row">
+          <label for="adres">Adres zamieszkania</label>
+          <input type="text" id="adres" name="adres" value="{{ klient.adres }}" class="form-control form-control--compact">
+        </div>
 
-        <label for="nr_tel">Numer telefonu</label><br>
-        <input type="text" id="nr_tel" name="nr_tel" value="{{ klient.nr_tel }}" style="width: 475px;"><br>
+        <div class="form-row">
+          <label for="nr_tel">Numer telefonu</label>
+          <input type="text" id="nr_tel" name="nr_tel" value="{{ klient.nr_tel }}" class="form-control form-control--compact">
+        </div>
 
-        <label for="adres_email">Adres email</label><br>
-        <input type="text" id="adres_email" name="adres_email" value="{{ klient.adres_email }}" style="width: 475px;"><br>
+        <div class="form-row">
+          <label for="adres_email">Adres email</label>
+          <input type="text" id="adres_email" name="adres_email" value="{{ klient.adres_email }}" class="form-control form-control--compact">
+        </div>
 
-        <label for="kto_oferta">Ofertę przygotowuje:</label><br>
-        <select id="kto_oferta" name="kto_oferta" style="width: 475px;">
+        <div class="form-row">
+          <label for="kto_oferta">Ofertę przygotowuje</label>
+          <select id="kto_oferta" name="kto_oferta" class="form-control form-control--compact">
             <option value="Justyna Kowalczyk" {% if klient.kto_oferta == 'Justyna Kowalczyk' %}selected{% endif %}>Justyna Kowalczyk</option>
             <option value="Zuzanna Rzeszewska" {% if klient.kto_oferta == 'Zuzanna Rzeszewska' %}selected{% endif %}>Zuzanna Rzeszewska</option>
             <option value="Piotr Pielowski" {% if klient.kto_oferta == 'Piotr Pielowski' %}selected{% endif %}>Piotr Pielowski</option>
             <option value="Przemysław Kowalczyk" {% if klient.kto_oferta == 'Przemysław Kowalczyk' %}selected{% endif %}>Przemysław Kowalczyk</option>
-        </select><br>
+        </select>
+        </div>
+      </div>
+        <br>
 
-        <h3>Ważność wyceny</h3>
-        <label for="dni">Dni:</label>
-        <input type="number" id="dni" name="dni" value="{{ klient.dni }}" min="0" style="width: 60px;">
-        <label for="tygodnie">Tygodnie:</label>
-        <input type="number" id="tygodnie" name="tygodnie" value="{{ klient.tygodnie if klient.tygodnie else 2 }}" min="0" style="width: 60px;">
-        <label for="miesiace">Miesiące:</label>
-        <input type="number" id="miesiace" name="miesiace" value="{{ klient.miesiace }}" min="0" style="width: 60px;">
+        <h3 class="section-subtitle">Ważność wyceny</h3>
+        <div class="validity-row">
+          <label for="dni">Dni</label>
+          <input type="number" id="dni" name="dni" value="{{ klient.dni }}" min="0" class="form-control input-tiny">
 
-        <br><br>
+          <label for="tygodnie">Tyg.</label>
+          <input type="number" id="tygodnie" name="tygodnie" value="{{ klient.tygodnie if klient.tygodnie else 2 }}" min="0" class="form-control input-tiny">
+
+          <label for="miesiace">Mies.</label>
+          <input type="number" id="miesiace" name="miesiace" value="{{ klient.miesiace }}" min="0" class="form-control input-tiny">
+        </div>
+
+        <br>
 
         <button type="submit">Zatwierdź dane</button>
     </form>
@@ -129,36 +146,29 @@
         Montaż
     </label><br>
 
-    <div id="pomiar_transport_montaz_cena" class="pole-cena" style="display: {% if usluga_pmt %}block{% else %}none{% endif %};">
+    <div id="pomiar_transport_montaz_cena" class="pole-cena {% if not usluga_pmt %}hidden{% endif %}">
         <label for="cena_pmt">Cena pomiaru, transportu i montażu</label><br>
-        <input type="number" id="cena_ppmmtt" name="cena_ppmmtt" value="{{ cena_ppmmtt }}" style="width: 475px;">
+        <input type="number" id="cena_ppmmtt" name="cena_ppmmtt" value="{{ cena_ppmmtt }}" class="form-control form-control--wide">
     </div>
 
-    <div id="pomiar_cena" class="pole-cena" style="display: {% if usluga_pomiar %}block{% else %}none{% endif %};">
+    <div id="pomiar_cena" class="pole-cena {% if not usluga_pomiar %}hidden{% endif %}">
         <label for="cena_pomiaru">Cena pomiaru</label><br>
-        <input type="number" id="cena_pomiaru" name="cena_pomiaru" value="{{ cena_pomiaruu }}" style="width: 475px;">
+        <input type="number" id="cena_pomiaru" name="cena_pomiaru" value="{{ cena_pomiaruu }}" class="form-control form-control--wide">
     </div>
 
-    <div id="transport_cena" class="pole-cena" style="display: {% if usluga_transport %}block{% else %}none{% endif %};">
+    <div id="transport_cena" class="pole-cena {% if not usluga_transport %}hidden{% endif %}">
         <label for="cena_transportu">Cena transportu</label><br>
-        <input type="number" id="cena_transportu" name="cena_transportu" value="{{ cena_transportt }}" style="width: 475px;">
+        <input type="number" id="cena_transportu" name="cena_transportu" value="{{ cena_transportt }}" class="form-control form-control--wide">
     </div>
 
-    <div id="montaz_cena" class="pole-cena" style="display: {% if usluga_montaz %}block{% else %}none{% endif %};">
+    <div id="montaz_cena" class="pole-cena {% if not usluga_montaz %}hidden{% endif %}">
         <label for="cena_montazu">Cena montażu</label><br>
-        <input type="number" id="cena_montazu" name="cena_montazu" value="{{ cena_montazuu }}" style="width: 475px;">
+        <input type="number" id="cena_montazu" name="cena_montazu" value="{{ cena_montazuu }}" class="form-control form-control--wide">
     </div>
 
     <br>
     <button type="submit">Zatwierdź usługi</button>
 </form>
-
-    <style>
-        .pole-cena {
-            margin-top: 10px;
-            margin-bottom: 10px;
-        }
-    </style>
 
 
     <script>
@@ -173,9 +183,9 @@
             var priceField = document.getElementById(id_map[service]);
             var checkbox = document.getElementById(service);
             if (checkbox.checked) {
-                priceField.style.display = 'block';
+                priceField.classList.remove('hidden');
             } else {
-                priceField.style.display = 'none';
+                priceField.classList.add('hidden');
             }
         }
 
@@ -198,7 +208,7 @@
     </div>
 </div>
 <div class="resetbutton">
-    <form action="{{ url_for('reset_strony') }}" method="post" style="text-align: center; margin-top: 50px;">
+    <form action="{{ url_for('reset_strony') }}" method="post" class="reset-form">
         <button type="submit">Wyloguj</button>
     </form>
     <br><br>
