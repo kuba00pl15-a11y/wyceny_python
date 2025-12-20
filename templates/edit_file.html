@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Edycja: {{ file }}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="tresc_strony">
+      <h1>Edycja pliku: {{ file }}</h1>
+      <form action="{{ url_for('admin_save') }}" method="post">
+        <input type="hidden" name="file" value="{{ file }}" />
+        <textarea
+          name="content"
+          rows="30"
+          style="width: 100%; font-family: monospace"
+        >
+{{ content }}</textarea
+        >
+        <br />
+        <button type="submit">Zapisz</button>
+        <a href="{{ url_for('admin_index') }}">Anuluj</a>
+      </form>
+    </div>
+  </body>
+</html>

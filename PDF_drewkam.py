@@ -1,5 +1,6 @@
 from flask import Flask, Response
 import io
+import os
 from io import BytesIO
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -12,8 +13,25 @@ from dateutil.relativedelta import relativedelta
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.platypus import Paragraph
 
+# Register DejaVu font if available (search common locations inside the project)
+base_dir = os.path.dirname(__file__)
+font_candidates = [
+    os.path.join(base_dir, "static", "dejavu-fonts-ttf-2.37", "ttf", "DejaVuSans.ttf"),
+    os.path.join(base_dir, "DejaVuSans.ttf"),
+]
+font_path = None
+for p in font_candidates:
+    if os.path.exists(p):
+        font_path = p
+        break
 
-pdfmetrics.registerFont(TTFont("DejaVu", "DejaVuSans.ttf"))
+if font_path:
+    try:
+        pdfmetrics.registerFont(TTFont("DejaVu", font_path))
+    except Exception as e:
+        print(f"Could not register DejaVu font: {e}")
+else:
+    print("DejaVu font not found; PDF will use default fonts.")
 
 
 right_normal_style = ParagraphStyle(
@@ -42,8 +60,10 @@ h2_style = ParagraphStyle(
     fontSize=13
 )
 
-# Ścieżka do zdjęcia
-image_path = r"static/images/header.jpg"
+# Ścieżka do zdjęcia (użyj ścieżki absolutnej jeśli plik istnieje)
+image_path = os.path.join(base_dir, "static", "images", "header.jpg")
+if not os.path.exists(image_path):
+    image_path = None
 
 def generuj_PDF(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_transport, usluga_montaz, cena_ppmmtt, cena_pomiaruu, cena_transportt, cena_montazuu, custom_obrobki=None):
     # Tworzenie dokumentu PDF
@@ -53,13 +73,21 @@ def generuj_PDF(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_transport,
     # Pobranie szerokości strony
     page_width, _ = A4
 
-    # Wczytanie obrazka o pełnej szerokości strony
-    img = Image(image_path, width=page_width, height=page_width * 0.06)
-    
+    # Wczytanie obrazka o pełnej szerokości strony (jeśli dostępny)
+    if image_path:
+        img = Image(image_path, width=page_width, height=page_width * 0.06)
+    else:
+        img = None
+
 
     # Style tekstu
     styles = getSampleStyleSheet()
-    styles['Normal'].fontName = 'DejaVu'
+    # Jeśli DejaVu się zarejestrował — ustaw jako domyślny font
+    try:
+        if 'DejaVu' in pdfmetrics.getRegisteredFontNames():
+            styles['Normal'].fontName = 'DejaVu'
+    except Exception:
+        pass
     styles['Normal'].fontSize = 9
 
 
@@ -102,7 +130,10 @@ def generuj_PDF(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_transport,
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
 
-    elements.extend([img, Spacer(1, 20), dane_tabela, Spacer(1, 20)])
+    if img:
+        elements.extend([img, Spacer(1, 20), dane_tabela, Spacer(1, 20)])
+    else:
+        elements.extend([Spacer(1, 20), dane_tabela, Spacer(1, 20)])
 
     max_rabat = max([getattr(produkt, 'rabat', 0) for produkt in zamowienie.lista_produktow], default=0)
 

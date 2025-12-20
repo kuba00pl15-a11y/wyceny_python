@@ -4,6 +4,7 @@ from flask_login import LoginManager, login_user, logout_user, UserMixin, curren
 import json
 import os
 import pickle
+import logging
 
 app = Flask(__name__)
 def wczytaj_ceny_obrobek():
@@ -484,7 +485,11 @@ def get_klient_from_session():
     return Klient()
 
 
-app.secret_key = "hfe9hf9wh"
+# Read SECRET_KEY from environment (set on production host). Falls back to an explicit dev default.
+secret = os.environ.get("SECRET_KEY")
+if not secret:
+    logging.warning("SECRET_KEY not set in environment; using insecure default. Set SECRET_KEY in production.")
+app.secret_key = secret or "dev-secret-please-change"
 
 @app.before_request
 def init_session_once():
@@ -493,13 +498,55 @@ def init_session_once():
     if "klient" not in session:
         save_klient_to_session(Klient())
 
+# Jinja filter to format timestamps
+from datetime import datetime
+@app.template_filter('datetimeformat')
+def datetimeformat(value):
+    try:
+        return datetime.fromtimestamp(int(value)).strftime('%d.%m.%Y %H:%M')
+    except Exception:
+        return value
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-users = {
-    'Drewkam': {'password': '1105'}
-}
+# Configure server-side sessions (filesystem). On PythonAnywhere this avoids large cookies.
+# Set SESSION_FILE_DIR via env var or default to instance folder.
+from flask_session import Session
+
+app.config.setdefault('SESSION_TYPE', 'filesystem')
+session_file_dir = os.environ.get('SESSION_FILE_DIR', os.path.join(app.instance_path, 'flask_session'))
+app.config.setdefault('SESSION_FILE_DIR', session_file_dir)
+app.config.setdefault('SESSION_PERMANENT', False)
+# Ensure directory exists
+os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
+Session(app)
+
+
+# Users configuration: read admin username and password/hash from environment to avoid hardcoding secrets.
+# Supported env vars:
+#  - ADMIN_USER (username)
+#  - ADMIN_PASSWORD_HASH (werkzeug hash, preferred)
+#  - ADMIN_PASSWORD (plain password, only for convenience; will be hashed on startup and a warning logged)
+
+from werkzeug.security import generate_password_hash, check_password_hash
+
+users = {}
+admin_user = os.environ.get('ADMIN_USER', 'Drewkam')
+admin_password_hash = os.environ.get('ADMIN_PASSWORD_HASH')
+admin_password_plain = os.environ.get('ADMIN_PASSWORD')
+if not admin_password_hash and admin_password_plain:
+    # Convenience: hash the provided plain password at startup (not recommended for production long-term)
+    logging.warning('ADMIN_PASSWORD provided in env — it will be hashed at startup. Prefer setting ADMIN_PASSWORD_HASH instead.')
+    admin_password_hash = generate_password_hash(admin_password_plain)
+
+if admin_password_hash:
+    users[admin_user] = {'password_hash': admin_password_hash}
+else:
+    # For backwards compatibility during local development only: set a default (very insecure)
+    logging.warning('No admin credentials found in environment; using default insecure password for user Drewkam.')
+    users[admin_user] = {'password_hash': generate_password_hash('1105')}
 
 # Klasa użytkownika
 class User(UserMixin):
@@ -511,6 +558,14 @@ def load_user(user_id):
     if user_id in users:
         return User(user_id)
     return None
+
+# Helper to validate credentials
+def validate_credentials(username, password):
+    user = users.get(username)
+    if not user:
+        return False
+    stored_hash = user.get('password_hash')
+    return check_password_hash(stored_hash, password)
 
 
 
@@ -738,8 +793,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = users.get(username)
-        if user and user['password'] == password:
+        if validate_credentials(username, password):
             login_user(User(username))
             flash('Zalogowano pomyślnie!')
             zamowienie = Zamowienie()
@@ -766,7 +820,92 @@ def logout():
     flash('Wylogowano.')
     return redirect(url_for('login'))
 
+from flask_login import login_required
+
+# --- Admin: simple JSON editor for data files (protected) ---
+
+def get_editable_files():
+    base = os.path.join(app.root_path, 'data')
+    files = []
+    for root, dirs, filenames in os.walk(base):
+        for fn in filenames:
+            if fn.endswith('.json'):
+                rel = os.path.relpath(os.path.join(root, fn), app.root_path)
+                files.append(rel.replace('\\', '/'))
+    return files
+
+
+@app.route('/admin')
+@login_required
+def admin_index():
+    files = get_editable_files()
+    # show last modified times
+    file_infos = []
+    for f in files:
+        path = os.path.join(app.root_path, f)
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            mtime = None
+        file_infos.append({'path': f, 'mtime': mtime})
+    return render_template('admin.html', files=file_infos)
+
+
+@app.route('/admin/edit', methods=['GET'])
+@login_required
+def admin_edit():
+    file = request.args.get('file')
+    if not file:
+        flash('Nie wybrano pliku do edycji.')
+        return redirect(url_for('admin_index'))
+    editable = get_editable_files()
+    if file not in editable:
+        flash('Wybrany plik nie jest dozwolony.')
+        return redirect(url_for('admin_index'))
+    path = os.path.join(app.root_path, file)
+    try:
+        with open(path, encoding='utf-8') as f:
+            content = f.read()
+        parsed = json.loads(content)
+        pretty = json.dumps(parsed, ensure_ascii=False, indent=4)
+    except Exception:
+        # fallback na surowy content w razie błędów
+        pretty = content
+    return render_template('edit_file.html', file=file, content=pretty)
+
+
+@app.route('/admin/save', methods=['POST'])
+@login_required
+def admin_save():
+    file = request.form.get('file')
+    content = request.form.get('content')
+    editable = get_editable_files()
+    if file not in editable:
+        flash('Plik niedozwolony.')
+        return redirect(url_for('admin_index'))
+    path = os.path.join(app.root_path, file)
+    # validate JSON
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError as e:
+        flash(f'Błąd JSON: {e}')
+        return redirect(url_for('admin_edit', file=file))
+    import shutil
+    try:
+        backup = path + '.bak'
+        shutil.copy2(path, backup)
+    except Exception as e:
+        logging.warning(f'Nie udało się utworzyć backupu: {e}')
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(parsed, f, ensure_ascii=False, indent=4)
+        flash('Plik zapisany, backup utworzony.')
+    except Exception as e:
+        flash(f'Błąd przy zapisie: {e}')
+    return redirect(url_for('admin_index'))
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    debug_flag = os.environ.get("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")
+    app.run(debug=debug_flag)
 

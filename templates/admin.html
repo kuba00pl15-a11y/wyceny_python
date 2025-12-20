@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Panel admina - edycja danych</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="tresc_strony">
+      <h1>Panel admina</h1>
+      <p>
+        Wybierz plik danych do edycji (tylko <code>.json</code> w katalogu
+        <code>data/</code>).
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Plik</th>
+            <th>Ostatnia modyfikacja</th>
+            <th>Akcje</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in files %}
+          <tr>
+            <td>{{ f.path }}</td>
+            <td>
+              {% if f.mtime %}{{ f.mtime | int | datetimeformat }}{% else %}-{%
+              endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('admin_edit') }}?file={{ f.path }}">Edytuj</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <br />
+      <a href="/">Powrót</a>
+    </div>
+  </body>
+</html>
