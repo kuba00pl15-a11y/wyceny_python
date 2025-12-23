@@ -406,7 +406,8 @@
                     <td><button type="button" class="removeRow">Usuń</button></td>
                 `;
 
-                // Copy values from last row if exists
+
+                // Copy values from last row if exists, but DO NOT copy obrobki (obróbka)
                 if (rowCount > 0) {
                     const lastRow = tbody.querySelectorAll('tr')[rowCount - 1];
 
@@ -443,10 +444,9 @@
                     const newIlosc = newRow.querySelector("input[name^='ilosc']");
                     if (prevIlosc && newIlosc) newIlosc.value = prevIlosc.value;
 
-                    // Przepisanie obróbek (ukryte pole)
-                    const prevObrobki = lastRow.querySelector("input[name^='obrobki_']");
+                    // NIE kopiujemy obróbek (obrobki) - pole hidden zostaje puste
                     const newObrobki = newRow.querySelector("input[name^='obrobki_']");
-                    if (prevObrobki && newObrobki) newObrobki.value = prevObrobki.value;
+                    if (newObrobki) newObrobki.value = "";
 
                 } else {
                     // Default initial values
