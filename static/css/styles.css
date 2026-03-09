@@ -493,23 +493,24 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:foc
 
 /* Table improvements */
 .product-table-wrapper { overflow-x: auto; margin: 0 12px; }
-.product-table { width: 100%; max-width: 100%; margin: 0 auto; table-layout: fixed; border-collapse: collapse; border-radius: 6px; overflow: hidden; }
-.product-table th, .product-table td { padding: 8px 10px; text-align: center; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.product-table th { background: #f1f5f9; }
+.product-table { width: 100%; max-width: 100%; margin: 0 auto; table-layout: auto; border-collapse: collapse; border-radius: 6px; overflow: hidden; }
+.product-table th, .product-table td { padding: 5px 4px; text-align: center; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product-table th { background: #f1f5f9; font-size: 13px; }
 
-/* Column width tuning: make 'Materiał' slightly narrower, keep table balanced */
-.product-table th:nth-child(1), .product-table td:nth-child(1) { width: 12%; }
-.product-table th:nth-child(2), .product-table td:nth-child(2) { width: 13%; padding-left: 12px; }
-.product-table th:nth-child(3), .product-table td:nth-child(3) { width: 8%; }
-.product-table th:nth-child(4), .product-table td:nth-child(4) { width: 10%; }
-.product-table th:nth-child(5), .product-table td:nth-child(5) { width: 10%; }
-.product-table th:nth-child(6), .product-table td:nth-child(6) { width: 10%; }
-.product-table th:nth-child(7), .product-table td:nth-child(7) { width: 8%; }
-.product-table th:nth-child(8), .product-table td:nth-child(8) { width: 8%; padding-left: 12px; }
-.product-table th:nth-child(9), .product-table td:nth-child(9) { width: 4%; }
+/* Column width tuning */
+.product-table th:nth-child(1), .product-table td:nth-child(1) { width: 11%; }
+.product-table th:nth-child(2), .product-table td:nth-child(2) { width: 12%; }
+.product-table th:nth-child(3), .product-table td:nth-child(3) { width: 11%; }
+.product-table th:nth-child(4), .product-table td:nth-child(4) { width: 9%; }
+.product-table th:nth-child(5), .product-table td:nth-child(5) { width: 9%; }
+.product-table th:nth-child(6), .product-table td:nth-child(6) { width: 9%; }
+.product-table th:nth-child(7), .product-table td:nth-child(7) { width: 7%; }
+.product-table th:nth-child(8), .product-table td:nth-child(8) { width: 8%; }
+.product-table th:nth-child(9), .product-table td:nth-child(9) { width: 6%; }
+.product-table th:nth-child(10), .product-table td:nth-child(10) { width: 6%; }
 
 
-.product-table td input[type="text"], .product-table td select, .product-table td input[type="number"] { width: 80%; box-sizing: border-box; }
+.product-table td input[type="text"], .product-table td select, .product-table td input[type="number"] { width: 100%; box-sizing: border-box; background: transparent; font-size: 12px; padding: 5px 4px; }
 
 @media (max-width: 720px) {
     .product-table th, .product-table td { font-size: 13px; padding: 6px 8px; }
