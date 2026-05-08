@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Panel admina - materiały i ceny</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        padding-bottom: 40px;
+        font-size: 15px;
+      }
+      .admin-box {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 0 10px;
+      }
+
+      /* ── sticky toolbar ─────────────────────────────────── */
+      .sticky-header {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: #fff;
+        border-bottom: 2px solid #c8c8c8;
+        padding: 8px 0 6px;
+      }
+      .sticky-header h1 {
+        margin: 0 0 6px 0;
+        font-size: 1.15rem;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .toolbar label { white-space: nowrap; }
+      .toolbar select {
+        flex: 1 1 140px;
+        min-width: 0;
+        font-size: 1rem;
+        padding: 6px 8px;
+        border-radius: 4px;
+        border: 1px solid #aaa;
+      }
+      .toolbar button {
+        padding: 8px 13px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        border-radius: 4px;
+        border: 1px solid #aaa;
+        white-space: nowrap;
+        min-height: 38px;        /* touch target */
+      }
+      #dodajBtn {
+        background: #2e7d32;
+        color: #fff;
+        border-color: #2e7d32;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+      #dodajBtn:hover, #dodajBtn:active { background: #1b5e20; }
+      .status {
+        min-height: 20px;
+        font-size: 0.88rem;
+        margin-top: 4px;
+      }
+      .status.ok  { color: #0a7d24; }
+      .status.err { color: #a30000; }
+
+      /* ── sticky bottom scrollbar ───────────────────────── */
+      .scroll-mirror {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        overflow-x: auto;
+        overflow-y: hidden;
+        height: 16px;
+        background: #f0f0f0;
+        border-top: 1px solid #bbb;
+        box-shadow: 0 -2px 6px rgba(0,0,0,.10);
+      }
+      .scroll-mirror-inner { height: 1px; }
+      /* hide on mobile — touch scroll works natively */
+      @media (max-width: 700px) {
+        .scroll-mirror { display: none; }
+        body { padding-bottom: 10px; }
+      }
+      /* desktop: reserve space at bottom so content isn't hidden behind bar */
+      @media (min-width: 701px) {
+        body { padding-bottom: 24px; }
+      }
+
+      /* ── table wrapper ──────────────────────────────────── */
+      .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* ── table (desktop) ────────────────────────────────── */
+      #materialTable {
+        border-collapse: collapse;
+        white-space: nowrap;
+        width: 100%;
+      }
+      #materialTable th,
+      #materialTable td {
+        border: 1px solid #ddd;
+        padding: 5px 7px;
+        vertical-align: middle;
+      }
+      #materialTable thead th {
+        background: #f0f0f0;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+
+      /* frozen first column */
+      #materialTable th:first-child,
+      #materialTable td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: #f7f7f7;
+        min-width: 150px;
+        box-shadow: 2px 0 4px rgba(0,0,0,.08);
+      }
+      #materialTable thead th:first-child {
+        z-index: 10;
+        background: #e8e8e8;
+      }
+
+      /* frozen last column */
+      #materialTable th:last-child,
+      #materialTable td:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 3;
+        background: #f7f7f7;
+        box-shadow: -2px 0 4px rgba(0,0,0,.08);
+      }
+      #materialTable thead th:last-child {
+        z-index: 10;
+        background: #e8e8e8;
+      }
+
+      /* dirty row */
+      #materialTable tbody tr.dirty td {
+        background: #fffbe6 !important;
+      }
+      #materialTable tbody tr.dirty td:first-child,
+      #materialTable tbody tr.dirty td:last-child {
+        background: #fff3cc !important;
+      }
+
+      /* inputs (desktop) */
+      #materialTable input[type="text"]   { width: 150px; }
+      #materialTable input[type="number"] { width: 84px; text-align: right; }
+      #materialTable select               { padding: 2px 4px; }
+
+      /* ── action buttons ─────────────────────────────────── */
+      .actions {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .actions .btn-save {
+        padding: 6px 11px;
+        background: #1565c0;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-weight: bold;
+        min-height: 36px;
+        white-space: nowrap;
+      }
+      .actions .btn-save:hover  { background: #0d47a1; }
+      .actions .btn-save.highlight {
+        background: #e65100;
+        animation: pulse 1s ease-in-out 2;
+      }
+      @keyframes pulse {
+        0%,100% { opacity: 1; }
+        50%      { opacity: .6; }
+      }
+      .actions .btn-del {
+        padding: 6px 9px;
+        background: #c62828;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        min-height: 36px;
+      }
+      .actions .btn-del:hover { background: #b71c1c; }
+
+      /* ══════════════════════════════════════════════════════
+         MOBILE / TABLET  ≤ 700 px  — card layout
+         ══════════════════════════════════════════════════════ */
+      @media (max-width: 700px) {
+        body { font-size: 16px; }
+
+        /* hide the table header row */
+        #materialTable thead { display: none; }
+
+        /* stack table, tbody, tr as blocks */
+        #materialTable,
+        #materialTable tbody { display: block; width: 100%; }
+
+        /* each row becomes a card */
+        #materialTable tbody tr {
+          display: block;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          margin: 10px 0;
+          padding: 10px;
+          background: #fafafa;
+          white-space: normal;
+        }
+        #materialTable tbody tr.dirty {
+          background: #fffbe6 !important;
+          border-color: #e65100;
+        }
+
+        /* each cell fills full width, with a label above the input */
+        #materialTable tbody td {
+          display: block;
+          border: none;
+          padding: 4px 0;
+          position: static !important;     /* cancel sticky */
+          left: auto !important;
+          right: auto !important;
+          box-shadow: none !important;
+          background: transparent !important;
+        }
+
+        /* label from data-label attribute */
+        #materialTable tbody td[data-label]::before {
+          content: attr(data-label);
+          display: block;
+          font-size: 0.75rem;
+          font-weight: bold;
+          color: #555;
+          margin-bottom: 2px;
+          text-transform: uppercase;
+          letter-spacing: .03em;
+        }
+
+        /* inputs fill the card width */
+        #materialTable input[type="text"],
+        #materialTable input[type="number"],
+        #materialTable select {
+          width: 100%;
+          font-size: 1rem;
+          padding: 8px 10px;
+          border: 1px solid #bbb;
+          border-radius: 4px;
+        }
+
+        /* actions row at the bottom of card */
+        #materialTable tbody td:last-child {
+          padding-top: 8px;
+          border-top: 1px solid #e0e0e0;
+          margin-top: 6px;
+        }
+        .actions {
+          flex-direction: row;
+          gap: 8px;
+        }
+        .actions .btn-save,
+        .actions .btn-del {
+          flex: 1;
+          font-size: 1rem;
+          padding: 10px;
+          min-height: 44px;
+          border-radius: 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tresc_strony admin-box">
+
+      <!-- ── sticky toolbar ── -->
+      <div class="sticky-header">
+        <h1>Zarządzanie materiałami i cenami</h1>
+        <div class="toolbar">
+          <label for="producentSelect">Producent:</label>
+          <select id="producentSelect">
+            {% for p in producenci %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" id="odswiezBtn">Odśwież</button>
+          <button type="button" id="dodajBtn">+ Dodaj materiał</button>
+        </div>
+        <div id="status" class="status"></div>
+      </div>
+
+      <!-- ── main table ── -->
+      <div class="table-wrap" id="tableWrap">
+        <table id="materialTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:14px;">
+        <a href="{{ url_for('admin_index') }}">Powrót do panelu admina</a>
+      </p>
+    </div>
+
+    <!-- ── sticky bottom scrollbar ── -->
+    <div class="scroll-mirror" id="scrollMirrorTop">
+      <div class="scroll-mirror-inner" id="scrollMirrorInner"></div>
+    </div>
+
+    <script>
+      const producentSelect = document.getElementById("producentSelect");
+      const odswiezBtn      = document.getElementById("odswiezBtn");
+      const dodajBtn        = document.getElementById("dodajBtn");
+      const statusBox       = document.getElementById("status");
+      const table           = document.getElementById("materialTable");
+      const thead           = table.querySelector("thead");
+      const tbody           = table.querySelector("tbody");
+      const tableWrap       = document.getElementById("tableWrap");
+      const mirrorTop       = document.getElementById("scrollMirrorTop");
+      const mirrorInner     = document.getElementById("scrollMirrorInner");
+
+      let currentSchema = null;
+
+      /* ── dual scrollbar sync ── */
+      function syncMirrorWidth() {
+        mirrorInner.style.width = tableWrap.scrollWidth + "px";
+      }
+      mirrorTop.addEventListener("scroll", () => { tableWrap.scrollLeft = mirrorTop.scrollLeft; });
+      tableWrap.addEventListener("scroll", () => { mirrorTop.scrollLeft = tableWrap.scrollLeft; });
+      new ResizeObserver(syncMirrorWidth).observe(tableWrap);
+
+      /* ── helpers ── */
+      function setStatus(message, ok = true) {
+        statusBox.textContent = message || "";
+        statusBox.className = `status ${ok ? "ok" : "err"}`;
+      }
+
+      function fmtPrice(value) {
+        const num = Number(value);
+        if (Number.isNaN(num)) return 0;
+        return Number.isInteger(num) ? num : Number(num.toFixed(2));
+      }
+
+      function markDirty(row) {
+        row.classList.add("dirty");
+        const saveBtn = row.querySelector(".btn-save");
+        if (saveBtn) saveBtn.classList.add("highlight");
+      }
+
+      function clearDirty(row) {
+        row.classList.remove("dirty");
+        const saveBtn = row.querySelector(".btn-save");
+        if (saveBtn) saveBtn.classList.remove("highlight");
+      }
+
+      /* ── header builder ── */
+      function buildHeader(schema) {
+        const tr = document.createElement("tr");
+
+        const thMaterial = document.createElement("th");
+        thMaterial.textContent = "Materiał";
+        tr.appendChild(thMaterial);
+
+        if (schema.mode === "forma") {
+          const thGroup = document.createElement("th");
+          thGroup.textContent = "Grupa";
+          tr.appendChild(thGroup);
+        }
+
+        schema.columns.forEach((col) => {
+          const th = document.createElement("th");
+          th.textContent = col.label;
+          tr.appendChild(th);
+        });
+
+        const thActions = document.createElement("th");
+        thActions.textContent = "Akcje";
+        tr.appendChild(thActions);
+
+        thead.innerHTML = "";
+        thead.appendChild(tr);
+        syncMirrorWidth();
+      }
+
+      /* ── price input ── */
+      function createPriceInput(value, row) {
+        const input = document.createElement("input");
+        input.type  = "number";
+        input.step  = "0.01";
+        input.min   = "0";
+        input.value = fmtPrice(value);
+        input.addEventListener("input", () => markDirty(row));
+        /* Enter key → save the row */
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            saveRow(row).catch((err) => setStatus(`Błąd: ${err.message}`, false));
+          }
+        });
+        return input;
+      }
+
+      /* ── payload ── */
+      function rowPayload(row) {
+        const materialInput = row.querySelector("input[data-role='material']");
+        const material = (materialInput.value || "").trim();
+        const prices = {};
+        let group = null;
+
+        if (currentSchema.mode === "forma") {
+          const groupSelect = row.querySelector("select[data-role='group']");
+          group = groupSelect ? groupSelect.value : "1";
+        }
+
+        currentSchema.columns.forEach((col) => {
+          const input = row.querySelector(`input[data-price='${col.key}']`);
+          prices[col.key] = fmtPrice(input ? input.value : 0);
+        });
+
+        return { material, prices, group };
+      }
+
+      /* ── save ── */
+      async function saveRow(row) {
+        const isNew = row.dataset.isNew === "1";
+        const originalMaterial = row.dataset.originalMaterial || "";
+        const producent = producentSelect.value;
+        const payload = rowPayload(row);
+
+        if (!payload.material) {
+          setStatus("Nazwa materiału jest wymagana.", false);
+          return;
+        }
+
+        const saveBtn = row.querySelector(".btn-save");
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "…"; }
+
+        const endpoint = isNew
+          ? "/api/materials"
+          : `/api/materials/${encodeURIComponent(originalMaterial)}`;
+        const method = isNew ? "POST" : "PUT";
+
+        const body = { producent, material: payload.material, prices: payload.prices };
+        if (currentSchema.mode === "forma") body.group = payload.group || "1";
+
+        const res  = await fetch(endpoint, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setStatus(data.error || "Nie udało się zapisać materiału.", false);
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Zapisz"; }
+          return;
+        }
+
+        setStatus(data.message || "Zapisano.");
+        /* update row state without full reload */
+        row.dataset.isNew = "0";
+        row.dataset.originalMaterial = payload.material;
+        clearDirty(row);
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Zapisz"; }
+      }
+
+      /* ── delete ── */
+      async function deleteRow(row) {
+        const producent = producentSelect.value;
+        const material  = row.dataset.originalMaterial || "";
+        if (!material) { row.remove(); return; }
+        if (!confirm(`Usunąć materiał: ${material}?`)) return;
+
+        const res  = await fetch(
+          `/api/materials/${encodeURIComponent(material)}?producent=${encodeURIComponent(producent)}`,
+          { method: "DELETE" }
+        );
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setStatus(data.error || "Nie udało się usunąć materiału.", false);
+          return;
+        }
+
+        setStatus(data.message || "Usunięto.");
+        row.remove();
+        syncMirrorWidth();
+      }
+
+      /* ── append row ── */
+      function appendRow(item, isNew = false) {
+        const tr = document.createElement("tr");
+        tr.dataset.isNew = isNew ? "1" : "0";
+        tr.dataset.originalMaterial = item.material || "";
+
+        /* material name */
+        const tdMaterial = document.createElement("td");
+        tdMaterial.dataset.label = "Materiał";
+        const materialInput = document.createElement("input");
+        materialInput.type = "text";
+        materialInput.value = item.material || "";
+        materialInput.dataset.role = "material";
+        materialInput.addEventListener("input", () => markDirty(tr));
+        materialInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            saveRow(tr).catch((err) => setStatus(`Błąd: ${err.message}`, false));
+          }
+        });
+        tdMaterial.appendChild(materialInput);
+        tr.appendChild(tdMaterial);
+
+        /* group (Forma only) */
+        if (currentSchema.mode === "forma") {
+          const tdGroup = document.createElement("td");
+          tdGroup.dataset.label = "Grupa";
+          const groupSelect = document.createElement("select");
+          groupSelect.dataset.role = "group";
+          const options = currentSchema.groupOptions || [
+            { value: "1", label: "Konglomeraty" },
+            { value: "2", label: "Dekton" },
+          ];
+          options.forEach((opt) => {
+            const option = document.createElement("option");
+            option.value = opt.value;
+            option.textContent = opt.label;
+            groupSelect.appendChild(option);
+          });
+          groupSelect.value = item.group || "1";
+          groupSelect.addEventListener("change", () => markDirty(tr));
+          tdGroup.appendChild(groupSelect);
+          tr.appendChild(tdGroup);
+        }
+
+        /* price columns */
+        currentSchema.columns.forEach((col) => {
+          const td = document.createElement("td");
+          td.dataset.label = col.label;
+          const input = createPriceInput(item.prices?.[col.key] ?? 0, tr);
+          input.dataset.price = col.key;
+          td.appendChild(input);
+          tr.appendChild(td);
+        });
+
+        /* actions */
+        const tdActions = document.createElement("td");
+        const actions   = document.createElement("div");
+        actions.className = "actions";
+
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.textContent = "Zapisz";
+        saveBtn.className = "btn-save";
+        saveBtn.addEventListener("click", () => {
+          saveRow(tr).catch((e) => setStatus(`Błąd: ${e.message}`, false));
+        });
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.textContent = "Usuń";
+        delBtn.className = "btn-del";
+        delBtn.addEventListener("click", () => {
+          deleteRow(tr).catch((e) => setStatus(`Błąd: ${e.message}`, false));
+        });
+
+        actions.appendChild(saveBtn);
+        actions.appendChild(delBtn);
+        tdActions.appendChild(actions);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+        if (isNew) {
+          markDirty(tr);
+          materialInput.focus();
+        }
+      }
+
+      /* ── load producer ── */
+      async function loadProducerData() {
+        const producent = producentSelect.value;
+        setStatus("Ładowanie…");
+
+        const res  = await fetch(`/api/materials/details?producent=${encodeURIComponent(producent)}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setStatus(data.error || "Nie udało się pobrać danych.", false);
+          return;
+        }
+
+        currentSchema = data.schema;
+        buildHeader(currentSchema);
+        tbody.innerHTML = "";
+        data.items.forEach((item) => appendRow(item, false));
+        setStatus(`Załadowano: ${data.items.length} materiałów.`);
+        syncMirrorWidth();
+      }
+
+      /* ── events ── */
+      producentSelect.addEventListener("change", () => {
+        loadProducerData().catch((e) => setStatus(`Błąd: ${e.message}`, false));
+      });
+      odswiezBtn.addEventListener("click", () => {
+        loadProducerData().catch((e) => setStatus(`Błąd: ${e.message}`, false));
+      });
+      dodajBtn.addEventListener("click", () => {
+        if (!currentSchema) return;
+        appendRow({ material: "", prices: {}, group: "1" }, true);
+        /* scroll table into view if needed */
+        tbody.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      loadProducerData().catch((e) => setStatus(`Błąd: ${e.message}`, false));
+    </script>
+  </body>
+</html>

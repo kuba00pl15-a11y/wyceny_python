@@ -132,11 +132,11 @@ button:active, .btn:active {
     border: 1px solid rgba(43,108,176,0.12);
 }
 
-.btn-danger, .resetbutton button {
+.btn-danger {
     background-color: #e53e3e;
 }
 
-.btn-danger:hover, .resetbutton button:hover {
+.btn-danger:hover {
     background-color: #c53030;
 }
 
@@ -267,30 +267,32 @@ button:active, .btn:active {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-.custom-button {
-    background-color: #3d3737;
+.custom-button, .glowna-btn {
+    background-color: #2b6cb0;
     color: white;
     padding: 7px 14px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     font-size: 14px;
+    font-family: inherit;
     transition: 0.3s;
-    margin-left: 20px;
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-decoration: none;
     text-align: center;
-    width: fit-content;
     width: 140px;
-    height: 26px;
+    height: 36px;
+    box-sizing: border-box;
 }
 
-.custom-button:hover {
-    background-color: #ccac5c;
+.custom-button:hover, .glowna-btn:hover {
+    background-color: #245a9a;
 }
 
-.custom-button:active {
-    background-color: #ccac5c;
+.custom-button:active, .glowna-btn:active {
+    background-color: #1f4d84;
     transform: scale(0.95);
 }
 .obrobka-row {
@@ -323,7 +325,7 @@ button:active, .btn:active {
 }
 
 .resetbutton button {
-    background-color: #e53935; /* czerwony */
+    background-color: #2b6cb0;
     color: white;
     border: none;
     padding: 14px 20px;
@@ -337,7 +339,7 @@ button:active, .btn:active {
 }
 
 .resetbutton button:hover {
-    background-color: #c62828;
+    background-color: #245a9a;
 }
 
 .resetbutton button:active {
@@ -518,7 +520,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:foc
 }
 
 
-a.custom-button { display: inline-flex; align-items: center; justify-content: center; }
+a.custom-button, a.glowna-btn { display: inline-flex; align-items: center; justify-content: center; }
 
 /* Small utilities */
 .przerwa_miedzy_przyciskami { gap: 8px; align-items: center; }

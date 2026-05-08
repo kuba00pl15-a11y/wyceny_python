@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel admina - obrobki</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      .admin-box { max-width: 1100px; margin: 0 auto; padding: 12px; }
+      .sticky-header {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 20;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 8px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .toolbar select,
+      .toolbar button {
+        min-height: 38px;
+        padding: 8px 10px;
+      }
+      .toolbar #dodajBtn {
+        background: #2e7d32;
+        color: #fff;
+        border: 0;
+        border-radius: 4px;
+        font-weight: 700;
+      }
+      .status { min-height: 22px; margin-top: 6px; }
+      .status.ok { color: #0a7d24; }
+      .status.err { color: #a30000; }
+      .table-wrap { overflow-x: auto; margin-top: 10px; }
+      #obrobkiTable { width: 100%; border-collapse: collapse; }
+      #obrobkiTable th, #obrobkiTable td {
+        border: 1px solid #ddd;
+        padding: 6px;
+        vertical-align: middle;
+      }
+      #obrobkiTable th { background: #f3f3f3; white-space: nowrap; }
+      #obrobkiTable tr.dirty td { background: #fffbe6; }
+      #obrobkiTable tr.group-divider td {
+        background: #eaf2ff;
+        color: #0d47a1;
+        font-weight: 700;
+        border: 1px solid #c7d8f5;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        padding: 7px 8px;
+      }
+      #obrobkiTable input, #obrobkiTable select {
+        width: 100%;
+        min-height: 34px;
+        padding: 6px;
+      }
+      .actions { display: flex; gap: 6px; }
+      .btn-save {
+        background: #1565c0;
+        color: #fff;
+        border: 0;
+        border-radius: 4px;
+        padding: 8px 10px;
+      }
+      .btn-del {
+        background: #c62828;
+        color: #fff;
+        border: 0;
+        border-radius: 4px;
+        padding: 8px 10px;
+      }
+      .hint {
+        margin-top: 8px;
+        font-size: 0.9rem;
+        color: #555;
+      }
+      @media (max-width: 760px) {
+        #obrobkiTable thead { display: none; }
+        #obrobkiTable, #obrobkiTable tbody { display: block; }
+        #obrobkiTable tr {
+          display: block;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          margin: 10px 0;
+          padding: 8px;
+          background: #fafafa;
+        }
+        #obrobkiTable td {
+          display: block;
+          border: 0;
+          padding: 4px 0;
+        }
+        #obrobkiTable td[data-label]::before {
+          content: attr(data-label);
+          display: block;
+          font-size: 0.75rem;
+          color: #666;
+          margin-bottom: 2px;
+          text-transform: uppercase;
+          font-weight: 700;
+        }
+        .actions .btn-save,
+        .actions .btn-del {
+          flex: 1;
+          min-height: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tresc_strony admin-box">
+      <div class="sticky-header">
+        <h1>Zarzadzanie obrobkami</h1>
+        <div class="toolbar">
+          <label for="producentSelect">Producent:</label>
+          <select id="producentSelect">
+            {% for p in producenci %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" id="odswiezBtn">Odswiez</button>
+          <button type="button" id="dodajBtn">+ Dodaj obrobke</button>
+        </div>
+        <div id="status" class="status"></div>
+      </div>
+
+      <p class="hint">
+        Jednostki: <strong>szt.</strong> (ilosc), <strong>mb</strong>, <strong>m2</strong> lub <strong>%</strong>.
+        Typ <strong>od ceny produktu</strong> nalicza cene obrobki jako procent/wspolczynnik od bazowej ceny produktu.
+      </p>
+
+      <div class="table-wrap">
+        <table id="obrobkiTable">
+          <thead>
+            <tr>
+              <th>Obrobka</th>
+              <th id="grupaTh">Grupa</th>
+              <th>Jednostka</th>
+              <th>Cena</th>
+              <th>Sposob naliczania</th>
+              <th>Akcje</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p style="margin-top: 14px;">
+        <a href="{{ url_for('admin_index') }}">Powrot do panelu admina</a>
+      </p>
+    </div>
+
+    <script>
+      const producentSelect = document.getElementById("producentSelect");
+      const odswiezBtn = document.getElementById("odswiezBtn");
+      const dodajBtn = document.getElementById("dodajBtn");
+      const statusBox = document.getElementById("status");
+      const tbody = document.querySelector("#obrobkiTable tbody");
+
+      let unitOptions = [];
+      let typeOptions = [];
+      let groupOptions = [];
+      let supportsGroup = false;
+
+      function setStatus(message, ok = true) {
+        statusBox.textContent = message || "";
+        statusBox.className = `status ${ok ? "ok" : "err"}`;
+      }
+
+      function toNumber(value) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function markDirty(row) {
+        row.classList.add("dirty");
+      }
+
+      function clearDirty(row) {
+        row.classList.remove("dirty");
+      }
+
+      function createSelect(options, selectedValue, allowCustom = false) {
+        const select = document.createElement("select");
+        options.forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt.value;
+          option.textContent = opt.label;
+          select.appendChild(option);
+        });
+
+        const values = options.map((x) => x.value);
+        if (allowCustom && selectedValue && !values.includes(selectedValue)) {
+          const customOption = document.createElement("option");
+          customOption.value = selectedValue;
+          customOption.textContent = `${selectedValue} (wlasna)`;
+          select.appendChild(customOption);
+        }
+
+        select.value = selectedValue || "";
+        return select;
+      }
+
+      function groupLabel(value) {
+        const found = groupOptions.find((opt) => opt.value === value);
+        return found ? found.label : value;
+      }
+
+      function compareByName(a, b) {
+        const aName = (a.name || "").trim();
+        const bName = (b.name || "").trim();
+        return aName.localeCompare(bName, "pl", { sensitivity: "base" });
+      }
+
+      function sortItemsForTable(items) {
+        const list = Array.isArray(items) ? [...items] : [];
+        if (!supportsGroup) {
+          list.sort(compareByName);
+          return list;
+        }
+
+        const groupOrder = new Map(groupOptions.map((opt, index) => [opt.value, index]));
+        list.sort((a, b) => {
+          const aGroup = a.group || "1";
+          const bGroup = b.group || "1";
+          const aRank = groupOrder.has(aGroup) ? groupOrder.get(aGroup) : Number.MAX_SAFE_INTEGER;
+          const bRank = groupOrder.has(bGroup) ? groupOrder.get(bGroup) : Number.MAX_SAFE_INTEGER;
+          if (aRank !== bRank) return aRank - bRank;
+          return compareByName(a, b);
+        });
+        return list;
+      }
+
+      function appendGroupDivider(value) {
+        const tr = document.createElement("tr");
+        tr.className = "group-divider";
+        const td = document.createElement("td");
+        td.colSpan = 6;
+        td.textContent = groupLabel(value);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+
+      function renderRows(items) {
+        tbody.innerHTML = "";
+        const sortedItems = sortItemsForTable(items);
+        let lastGroup = null;
+
+        sortedItems.forEach((item) => {
+          if (supportsGroup) {
+            const currentGroup = item.group || "1";
+            if (currentGroup !== lastGroup) {
+              appendGroupDivider(currentGroup);
+              lastGroup = currentGroup;
+            }
+          }
+          appendRow(item);
+        });
+      }
+
+      function rowPayload(row) {
+        const groupSelect = row.querySelector("select[data-role='group']");
+        return {
+          name: (row.querySelector("input[data-role='name']").value || "").trim(),
+          group: groupSelect ? groupSelect.value : "1",
+          unit: row.querySelector("select[data-role='unit']").value,
+          price: toNumber(row.querySelector("input[data-role='price']").value),
+          type: row.querySelector("select[data-role='type']").value,
+        };
+      }
+
+      async function saveRow(row) {
+        const isNew = row.dataset.isNew === "1";
+        const originalName = row.dataset.originalName || "";
+        const producent = producentSelect.value;
+        const payload = rowPayload(row);
+
+        if (!payload.name) {
+          setStatus("Nazwa obrobki jest wymagana.", false);
+          return;
+        }
+
+        const endpoint = isNew ? "/api/obrobki" : `/api/obrobki/${encodeURIComponent(originalName)}`;
+        const method = isNew ? "POST" : "PUT";
+        const body = {
+          producent,
+          name: payload.name,
+          unit: payload.unit,
+          price: payload.price,
+          type: payload.type,
+        };
+        if (supportsGroup) {
+          body.group = payload.group || "1";
+        }
+
+        const btnSave = row.querySelector(".btn-save");
+        btnSave.disabled = true;
+        btnSave.textContent = "...";
+
+        const res = await fetch(endpoint, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        btnSave.disabled = false;
+        btnSave.textContent = "Zapisz";
+
+        if (!res.ok) {
+          setStatus(data.error || "Nie udalo sie zapisac obrobki.", false);
+          return;
+        }
+
+        row.dataset.isNew = "0";
+        row.dataset.originalName = payload.name;
+        clearDirty(row);
+
+        if (supportsGroup) {
+          await loadProducerData();
+          setStatus(data.message || "Zapisano.");
+          return;
+        }
+
+        setStatus(data.message || "Zapisano.");
+      }
+
+      async function deleteRow(row) {
+        const producent = producentSelect.value;
+        const name = row.dataset.originalName || "";
+
+        if (!name) {
+          row.remove();
+          return;
+        }
+        if (!confirm(`Usunac obrobke: ${name}?`)) return;
+
+        const res = await fetch(`/api/obrobki/${encodeURIComponent(name)}?producent=${encodeURIComponent(producent)}`, {
+          method: "DELETE",
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setStatus(data.error || "Nie udalo sie usunac obrobki.", false);
+          return;
+        }
+
+        row.remove();
+        setStatus(data.message || "Usunieto.");
+      }
+
+      function appendRow(item, isNew = false) {
+        const tr = document.createElement("tr");
+        tr.dataset.isNew = isNew ? "1" : "0";
+        tr.dataset.originalName = item.name || "";
+
+        const tdName = document.createElement("td");
+        tdName.dataset.label = "Obrobka";
+        const inputName = document.createElement("input");
+        inputName.type = "text";
+        inputName.value = item.name || "";
+        inputName.dataset.role = "name";
+        inputName.addEventListener("input", () => markDirty(tr));
+        inputName.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            saveRow(tr).catch((err) => setStatus(`Blad: ${err.message}`, false));
+          }
+        });
+        tdName.appendChild(inputName);
+        tr.appendChild(tdName);
+
+        const tdGroup = document.createElement("td");
+        tdGroup.dataset.label = "Grupa";
+        tdGroup.className = "group-td";
+        tdGroup.style.display = supportsGroup ? "" : "none";
+        if (supportsGroup) {
+          const groupSelect = createSelect(groupOptions, item.group || "1", false);
+          groupSelect.dataset.role = "group";
+          groupSelect.addEventListener("change", () => markDirty(tr));
+          tdGroup.appendChild(groupSelect);
+        }
+        tr.appendChild(tdGroup);
+
+        const tdUnit = document.createElement("td");
+        tdUnit.dataset.label = "Jednostka";
+        const unitSelect = createSelect(unitOptions, item.unit || "ilosc", true);
+        unitSelect.dataset.role = "unit";
+        unitSelect.addEventListener("change", () => markDirty(tr));
+        tdUnit.appendChild(unitSelect);
+        tr.appendChild(tdUnit);
+
+        const tdPrice = document.createElement("td");
+        tdPrice.dataset.label = "Cena";
+        const inputPrice = document.createElement("input");
+        inputPrice.type = "number";
+        inputPrice.step = "0.01";
+        inputPrice.value = toNumber(item.price || 0);
+        inputPrice.dataset.role = "price";
+        inputPrice.addEventListener("input", () => markDirty(tr));
+        inputPrice.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            saveRow(tr).catch((err) => setStatus(`Blad: ${err.message}`, false));
+          }
+        });
+        tdPrice.appendChild(inputPrice);
+        tr.appendChild(tdPrice);
+
+        const tdType = document.createElement("td");
+        tdType.dataset.label = "Sposob naliczania";
+        const typeSelect = createSelect(typeOptions, item.type || "", false);
+        typeSelect.dataset.role = "type";
+        typeSelect.addEventListener("change", () => markDirty(tr));
+        tdType.appendChild(typeSelect);
+        tr.appendChild(tdType);
+
+        const tdActions = document.createElement("td");
+        tdActions.dataset.label = "Akcje";
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnSave = document.createElement("button");
+        btnSave.type = "button";
+        btnSave.className = "btn-save";
+        btnSave.textContent = "Zapisz";
+        btnSave.addEventListener("click", () => {
+          saveRow(tr).catch((err) => setStatus(`Blad: ${err.message}`, false));
+        });
+
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.className = "btn-del";
+        btnDel.textContent = "Usun";
+        btnDel.addEventListener("click", () => {
+          deleteRow(tr).catch((err) => setStatus(`Blad: ${err.message}`, false));
+        });
+
+        actions.appendChild(btnSave);
+        actions.appendChild(btnDel);
+        tdActions.appendChild(actions);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+
+        if (isNew) {
+          markDirty(tr);
+          inputName.focus();
+        }
+      }
+
+      async function loadProducerData() {
+        const producent = producentSelect.value;
+        setStatus("Ladowanie...");
+
+        const res = await fetch(`/api/obrobki/details?producent=${encodeURIComponent(producent)}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setStatus(data.error || "Nie udalo sie pobrac danych.", false);
+          return;
+        }
+
+        unitOptions = data.unitOptions || [];
+        typeOptions = data.typeOptions || [];
+        groupOptions = data.groupOptions || [];
+        supportsGroup = Boolean(data.supportsGroup);
+
+        const grupaTh = document.getElementById("grupaTh");
+        if (grupaTh) grupaTh.style.display = supportsGroup ? "" : "none";
+
+        renderRows(data.items || []);
+        setStatus(`Zaladowano: ${(data.items || []).length} obrobek.`);
+      }
+
+      producentSelect.addEventListener("change", () => {
+        loadProducerData().catch((err) => setStatus(`Blad: ${err.message}`, false));
+      });
+
+      odswiezBtn.addEventListener("click", () => {
+        loadProducerData().catch((err) => setStatus(`Blad: ${err.message}`, false));
+      });
+
+      dodajBtn.addEventListener("click", () => {
+        appendRow({ name: "", group: "1", unit: "ilosc", price: 0, type: "" }, true);
+      });
+
+      loadProducerData().catch((err) => setStatus(`Blad: ${err.message}`, false));
+    </script>
+  </body>
+</html>

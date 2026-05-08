@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, Response, session, flash
+from flask import Flask, render_template, request, redirect, url_for, Response, session, flash, jsonify
 import math
 from flask_login import LoginManager, login_user, logout_user, UserMixin, current_user
 import json
@@ -8,12 +8,26 @@ import logging
 
 app = Flask(__name__)
 def wczytaj_ceny_obrobek():
-    katalog = "data/obrobki"
+    katalog = os.path.join(app.root_path, "data", "obrobki")
     obrobki = {}
+    if not os.path.isdir(katalog):
+        return obrobki
+
     for plik in os.listdir(katalog):
+        if not (plik.startswith("obrobki_") and plik.endswith(".json")):
+            continue
+
         nazwa = plik.replace("obrobki_", "").replace(".json", "").replace("_", " ").strip().lower().replace(" ", "")
-        with open(os.path.join(katalog, plik), encoding="utf-8") as f:
-            obrobki[nazwa] = json.load(f)
+        path = os.path.join(katalog, plik)
+        try:
+            with open(path, encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    obrobki[nazwa] = loaded
+                else:
+                    logging.warning(f"Plik {path} nie zawiera obiektu JSON.")
+        except Exception as e:
+            logging.warning(f"Nie udało się wczytać obróbek z pliku {path}: {e}")
     return obrobki
 
 obrobki_cennik = wczytaj_ceny_obrobek()
@@ -231,7 +245,17 @@ class Formasystem(Producent):
             else:
                 break
 
-        return tabelka_forma[material][czesc][kolumna]
+        if material not in tabelka_forma:
+            logging.warning(f"Nieznany materiał Forma system: {material}. Zwracam 0.")
+            return 0
+
+        try:
+            return tabelka_forma[material][czesc][kolumna]
+        except (IndexError, TypeError):
+            logging.warning(
+                f"Nieprawidłowe dane cennika dla materiału {material} (czesc={czesc}, kolumna={kolumna}). Zwracam 0."
+            )
+            return 0
 
     def cena(self, d, s, g, typ, material=""):
         cena_jednostkowa = self.cena_jed(d, s, g, typ, material)
@@ -295,7 +319,19 @@ class Produkt:
 
     def _wylicz_cene_bazowa(self):
         if self._cena_bazowa is None:
-            self._cena_bazowa = self.producent.cena(self.dlugosc, self.szerokosc, self.grubosc, self.typ, self.material)
+            try:
+                self._cena_bazowa = self.producent.cena(
+                    self.dlugosc,
+                    self.szerokosc,
+                    self.grubosc,
+                    self.typ,
+                    self.material,
+                )
+            except Exception as e:
+                logging.warning(
+                    f"Nie udało się wyliczyć ceny bazowej dla materiału {self.material} ({self.producent.nazwa}): {e}. Zwracam 0."
+                )
+                self._cena_bazowa = 0
         return self._cena_bazowa
 
     def cena_jednostkowa(self):
@@ -720,6 +756,7 @@ def dodaj_produkt():
 
     # GET
     obrobki_data = {}
+    forma_obrobki_groups = _load_forma_obrobki_groups()
     sciezka = "data/obrobki"
     if os.path.exists(sciezka):
         for plik in os.listdir(sciezka):
@@ -735,6 +772,7 @@ def dodaj_produkt():
         "dodaj_produkt.html",
         lista_produktow=zamowienie.lista_produktow,
         obrobki_data=obrobki_data,
+        forma_obrobki_groups=forma_obrobki_groups,
         custom_obrobki=zamowienie.wlasne_obrobki
     )
     
@@ -847,6 +885,612 @@ def get_editable_files():
     return files
 
 
+MATERIAL_SCHEMAS = {
+    "Forma system": {
+        "file": "data/tabelka_forma.json",
+        "thicknesses": [1.2, 2.0],
+        "mode": "forma",
+    },
+    "Imperial": {
+        "file": "data/tabelka_imperial.json",
+        "thicknesses": [2.0, 3.0],
+        "mode": "4col",
+        "columns": [
+            {"key": "parapet_2_0", "label": "Parapet 2.0"},
+            {"key": "parapet_3_0", "label": "Parapet 3.0"},
+            {"key": "blat_2_0", "label": "Blat 2.0"},
+            {"key": "blat_3_0", "label": "Blat 3.0"},
+        ],
+    },
+    "Olgran": {
+        "file": "data/tabelka_olgran.json",
+        "thicknesses": [2.0, 3.0],
+        "mode": "4col",
+        "columns": [
+            {"key": "parapet_2_0", "label": "Parapet 2.0"},
+            {"key": "parapet_3_0", "label": "Parapet 3.0"},
+            {"key": "blat_2_0", "label": "Blat 2.0"},
+            {"key": "blat_3_0", "label": "Blat 3.0"},
+        ],
+    },
+    "O rety parapety": {
+        "file": "data/tabelka_oretyparapety.json",
+        "thicknesses": [2.0, 3.0],
+        "mode": "2col",
+        "columns": [
+            {"key": "parapet_2_0", "label": "Parapet 2.0"},
+            {"key": "parapet_3_0", "label": "Parapet 3.0"},
+        ],
+    },
+}
+
+OBROBKI_SCHEMAS = {
+    "Forma system": "data/obrobki/obrobki_formasystem.json",
+    "Imperial": "data/obrobki/obrobki_imperial.json",
+    "Olgran": "data/obrobki/obrobki_olgran.json",
+    "O rety parapety": "data/obrobki/obrobki_oretyparapety.json",
+    "Stolarz": "data/obrobki/obrobki_stolarz.json",
+}
+
+OBROBKI_UNIT_OPTIONS = [
+    {"value": "ilosc", "label": "szt."},
+    {"value": "mb", "label": "mb"},
+    {"value": "m2", "label": "m2"},
+    {"value": "procent", "label": "%"},
+]
+
+OBROBKI_TYPE_OPTIONS = [
+    {"value": "", "label": "standard"},
+    {"value": "od_produktu", "label": "od ceny produktu"},
+]
+
+FORMA_GROUPS_FILE = os.path.join("data", "forma_material_konglomeraty.json")
+FORMA_GROUP_DEFAULT = "1"
+FORMA_GROUP_OPTIONS = {"1", "2"}
+FORMA_OBROBKI_GROUPS_FILE = os.path.join("data", "obrobki", "forma_obrobki_groups.json")
+FORMA_OBROBKI_GROUP_DEFAULT = "1"
+FORMA_OBROBKI_GROUP_OPTIONS = {"1", "2"}
+
+
+def _obrobki_file_path(producent):
+    rel = OBROBKI_SCHEMAS.get(producent)
+    if not rel:
+        return None
+    return os.path.join(app.root_path, rel)
+
+
+def _normalize_obrobka_unit(value):
+    val = str(value or "").strip().lower()
+    return val or "ilosc"
+
+
+def _normalize_obrobka_type(value):
+    val = str(value or "").strip().lower()
+    return "od_produktu" if val == "od_produktu" else ""
+
+
+def _load_obrobki_table(producent):
+    path = _obrobki_file_path(producent)
+    if not path:
+        raise ValueError("Nieznany producent")
+    with open(path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+        if not isinstance(raw, dict):
+            raise ValueError("Nieprawidłowy format danych obróbek")
+        return raw
+
+
+def _save_obrobki_table(producent, data):
+    path = _obrobki_file_path(producent)
+    if not path:
+        raise ValueError("Nieznany producent")
+
+    backup = path + ".bak"
+    tmp_path = path + ".tmp"
+
+    try:
+        import shutil
+        shutil.copy2(path, backup)
+    except Exception as e:
+        logging.warning(f"Nie udało się utworzyć backupu dla {path}: {e}")
+
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    os.replace(tmp_path, path)
+
+    global obrobki_cennik
+    obrobki_cennik = wczytaj_ceny_obrobek()
+
+
+def _serialize_obrobka_item(name, raw_value, producent=None):
+    raw = raw_value if isinstance(raw_value, dict) else {}
+    item = {
+        "name": str(name),
+        "unit": _normalize_obrobka_unit(raw.get("jednostka", "ilosc")),
+        "price": _to_float(raw.get("cena"), 0),
+        "type": _normalize_obrobka_type(raw.get("typ", "")),
+    }
+    if producent == "Forma system":
+        groups = _load_forma_obrobki_groups()
+        item["group"] = groups.get(str(name), _guess_forma_obrobka_group(name))
+    return item
+
+
+def _build_raw_obrobka_value(unit, price, calc_type):
+    item = {
+        "jednostka": _normalize_obrobka_unit(unit),
+        "cena": _to_float(price, 0),
+    }
+    normalized_type = _normalize_obrobka_type(calc_type)
+    if normalized_type:
+        item["typ"] = normalized_type
+    return item
+
+
+def _forma_obrobki_groups_path():
+    return os.path.join(app.root_path, FORMA_OBROBKI_GROUPS_FILE)
+
+
+def _normalize_forma_obrobka_group(value):
+    value = str(value or "").strip()
+    return value if value in FORMA_OBROBKI_GROUP_OPTIONS else FORMA_OBROBKI_GROUP_DEFAULT
+
+
+def _guess_forma_obrobka_group(name):
+    return "2" if "spiek" in str(name).lower() else "1"
+
+
+def _load_forma_obrobki_groups():
+    path = _forma_obrobki_groups_path()
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+            if not isinstance(raw, dict):
+                return {}
+            return {str(k): _normalize_forma_obrobka_group(v) for k, v in raw.items()}
+    except Exception as e:
+        logging.warning(f"Nie udało się wczytać mapy grup obróbek Forma system: {e}")
+        return {}
+
+
+def _save_forma_obrobki_groups(groups):
+    path = _forma_obrobki_groups_path()
+    backup = path + ".bak"
+    tmp_path = path + ".tmp"
+
+    try:
+        import shutil
+        if os.path.exists(path):
+            shutil.copy2(path, backup)
+    except Exception as e:
+        logging.warning(f"Nie udało się utworzyć backupu mapy grup obróbek: {e}")
+
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(groups, f, ensure_ascii=False, indent=4)
+    os.replace(tmp_path, path)
+
+
+def _forma_groups_path():
+    return os.path.join(app.root_path, FORMA_GROUPS_FILE)
+
+
+def _normalize_forma_group(value):
+    value = str(value).strip()
+    return value if value in FORMA_GROUP_OPTIONS else FORMA_GROUP_DEFAULT
+
+
+def _load_forma_groups():
+    path = _forma_groups_path()
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+            if not isinstance(raw, dict):
+                return {}
+            return {str(k): _normalize_forma_group(v) for k, v in raw.items()}
+    except Exception as e:
+        logging.warning(f"Nie udało się wczytać mapy grup Forma system: {e}")
+        return {}
+
+
+def _save_forma_groups(groups):
+    path = _forma_groups_path()
+    backup = path + ".bak"
+    tmp_path = path + ".tmp"
+
+    try:
+        import shutil
+        if os.path.exists(path):
+            shutil.copy2(path, backup)
+    except Exception as e:
+        logging.warning(f"Nie udało się utworzyć backupu mapy grup: {e}")
+
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(groups, f, ensure_ascii=False, indent=4)
+    os.replace(tmp_path, path)
+
+
+def _forma_columns():
+    columns = []
+    for idx in range(1, 10):
+        columns.append({"key": f"t12_p{idx}", "label": f"1.2 / P{idx}"})
+    for idx in range(1, 10):
+        columns.append({"key": f"t20_p{idx}", "label": f"2.0 / P{idx}"})
+    return columns
+
+
+def _material_schema_with_columns(producent):
+    schema = MATERIAL_SCHEMAS.get(producent)
+    if not schema:
+        return None
+    if schema["mode"] == "forma":
+        return {
+            "producent": producent,
+            "thicknesses": schema["thicknesses"],
+            "mode": schema["mode"],
+            "columns": _forma_columns(),
+            "groupOptions": [
+                {"value": "1", "label": "Konglomeraty"},
+                {"value": "2", "label": "Dekton"},
+            ],
+        }
+    return {
+        "producent": producent,
+        "thicknesses": schema["thicknesses"],
+        "mode": schema["mode"],
+        "columns": schema["columns"],
+    }
+
+
+def _material_file_path(producent):
+    schema = MATERIAL_SCHEMAS.get(producent)
+    if not schema:
+        return None
+    return os.path.join(app.root_path, schema["file"])
+
+
+def _load_material_table(producent):
+    path = _material_file_path(producent)
+    if not path:
+        raise ValueError("Nieznany producent")
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_material_table(producent, data):
+    path = _material_file_path(producent)
+    if not path:
+        raise ValueError("Nieznany producent")
+
+    backup = path + ".bak"
+    tmp_path = path + ".tmp"
+
+    try:
+        import shutil
+        shutil.copy2(path, backup)
+    except Exception as e:
+        logging.warning(f"Nie udało się utworzyć backupu dla {path}: {e}")
+
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    os.replace(tmp_path, path)
+
+
+def _to_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _serialize_material_item(producent, material, raw_value):
+    schema = MATERIAL_SCHEMAS[producent]
+    mode = schema["mode"]
+    prices = {}
+
+    if mode == "forma":
+        part_12 = raw_value[0] if isinstance(raw_value, list) and len(raw_value) > 0 else []
+        part_20 = raw_value[1] if isinstance(raw_value, list) and len(raw_value) > 1 else []
+        for idx in range(9):
+            prices[f"t12_p{idx + 1}"] = _to_float(part_12[idx] if idx < len(part_12) else 0)
+        for idx in range(9):
+            prices[f"t20_p{idx + 1}"] = _to_float(part_20[idx] if idx < len(part_20) else 0)
+    elif mode == "4col":
+        raw = raw_value if isinstance(raw_value, list) else []
+        keys = ["parapet_2_0", "parapet_3_0", "blat_2_0", "blat_3_0"]
+        for idx, key in enumerate(keys):
+            prices[key] = _to_float(raw[idx] if idx < len(raw) else 0)
+    elif mode == "2col":
+        raw = raw_value if isinstance(raw_value, list) else []
+        keys = ["parapet_2_0", "parapet_3_0"]
+        for idx, key in enumerate(keys):
+            prices[key] = _to_float(raw[idx] if idx < len(raw) else 0)
+
+    item = {"material": material, "prices": prices}
+    if producent == "Forma system":
+        groups = _load_forma_groups()
+        item["group"] = groups.get(material, FORMA_GROUP_DEFAULT)
+    return item
+
+
+def _build_raw_material_value(producent, prices):
+    schema = MATERIAL_SCHEMAS[producent]
+    mode = schema["mode"]
+
+    if mode == "forma":
+        part_12 = []
+        part_20 = []
+        for idx in range(1, 10):
+            part_12.append(_to_float(prices.get(f"t12_p{idx}"), 0.0))
+        for idx in range(1, 10):
+            part_20.append(_to_float(prices.get(f"t20_p{idx}"), 0.0))
+        return [part_12, part_20]
+
+    if mode == "4col":
+        keys = ["parapet_2_0", "parapet_3_0", "blat_2_0", "blat_3_0"]
+        return [_to_float(prices.get(k), 0.0) for k in keys]
+
+    keys = ["parapet_2_0", "parapet_3_0"]
+    return [_to_float(prices.get(k), 0.0) for k in keys]
+
+
+@app.route('/api/materials', methods=['GET'])
+def api_materials():
+    material_map = {}
+    thickness_map = {}
+    forma_groups = _load_forma_groups()
+
+    for producent, schema in MATERIAL_SCHEMAS.items():
+        try:
+            table = _load_material_table(producent)
+            names = sorted(table.keys(), key=lambda x: x.lower())
+        except Exception as e:
+            logging.warning(f"Nie udało się wczytać cennika dla {producent}: {e}")
+            names = []
+
+        material_map[producent] = names
+        for material in names:
+            if material not in thickness_map:
+                thickness_map[material] = {}
+            thickness_map[material][producent] = schema["thicknesses"]
+
+    # Stolarz pozostaje pozycją stałą
+    material_map["Stolarz"] = ["Dąb"]
+    if "Dąb" not in thickness_map:
+        thickness_map["Dąb"] = {}
+    thickness_map["Dąb"]["Stolarz"] = [3.0, 4.0, 5.0, 6.0]
+
+    return jsonify({"materials": material_map, "thicknesses": thickness_map, "forma_groups": forma_groups})
+
+
+@app.route('/api/materials/schema', methods=['GET'])
+def api_materials_schema():
+    producent = request.args.get('producent', '').strip()
+    schema = _material_schema_with_columns(producent)
+    if not schema:
+        return jsonify({"error": "Nieznany producent"}), 400
+    return jsonify(schema)
+
+
+@app.route('/api/materials/details', methods=['GET'])
+def api_materials_details():
+    producent = request.args.get('producent', '').strip()
+    if producent not in MATERIAL_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+
+    table = _load_material_table(producent)
+    items = []
+    for material, raw_value in table.items():
+        items.append(_serialize_material_item(producent, material, raw_value))
+    items.sort(key=lambda x: x["material"].lower())
+
+    return jsonify({
+        "producent": producent,
+        "schema": _material_schema_with_columns(producent),
+        "items": items,
+    })
+
+
+@app.route('/api/materials', methods=['POST'])
+def api_materials_create():
+    payload = request.get_json(silent=True) or {}
+    producent = (payload.get('producent') or '').strip()
+    material = (payload.get('material') or '').strip()
+    prices = payload.get('prices') or {}
+    group = _normalize_forma_group(payload.get('group', FORMA_GROUP_DEFAULT))
+
+    if producent not in MATERIAL_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+    if not material:
+        return jsonify({"error": "Nazwa materiału jest wymagana"}), 400
+
+    table = _load_material_table(producent)
+    if material in table:
+        return jsonify({"error": "Materiał już istnieje"}), 409
+
+    table[material] = _build_raw_material_value(producent, prices)
+    _save_material_table(producent, table)
+
+    if producent == "Forma system":
+        groups = _load_forma_groups()
+        groups[material] = group
+        _save_forma_groups(groups)
+
+    return jsonify({"status": "ok", "message": "Materiał dodany"}), 201
+
+
+@app.route('/api/materials/<path:material_name>', methods=['PUT'])
+def api_materials_update(material_name):
+    payload = request.get_json(silent=True) or {}
+    producent = (payload.get('producent') or request.args.get('producent') or '').strip()
+    nowa_nazwa = (payload.get('material') or material_name or '').strip()
+    prices = payload.get('prices') or {}
+    group = _normalize_forma_group(payload.get('group', FORMA_GROUP_DEFAULT))
+
+    if producent not in MATERIAL_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+
+    table = _load_material_table(producent)
+    if material_name not in table:
+        return jsonify({"error": "Nie znaleziono materiału"}), 404
+
+    if nowa_nazwa != material_name and nowa_nazwa in table:
+        return jsonify({"error": "Materiał o nowej nazwie już istnieje"}), 409
+
+    raw_value = _build_raw_material_value(producent, prices)
+    if nowa_nazwa != material_name:
+        table.pop(material_name)
+    table[nowa_nazwa] = raw_value
+
+    _save_material_table(producent, table)
+
+    if producent == "Forma system":
+        groups = _load_forma_groups()
+        if material_name in groups:
+            groups.pop(material_name)
+        groups[nowa_nazwa] = group
+        _save_forma_groups(groups)
+
+    return jsonify({"status": "ok", "message": "Materiał zaktualizowany"})
+
+
+@app.route('/api/materials/<path:material_name>', methods=['DELETE'])
+def api_materials_delete(material_name):
+    producent = (request.args.get('producent') or '').strip()
+    if producent not in MATERIAL_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+
+    table = _load_material_table(producent)
+    if material_name not in table:
+        return jsonify({"error": "Nie znaleziono materiału"}), 404
+
+    table.pop(material_name)
+    _save_material_table(producent, table)
+
+    if producent == "Forma system":
+        groups = _load_forma_groups()
+        if material_name in groups:
+            groups.pop(material_name)
+            _save_forma_groups(groups)
+
+    return jsonify({"status": "ok", "message": "Materiał usunięty"})
+
+
+@app.route('/api/obrobki/details', methods=['GET'])
+def api_obrobki_details():
+    producent = request.args.get('producent', '').strip()
+    if producent not in OBROBKI_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+
+    table = _load_obrobki_table(producent)
+    items = [_serialize_obrobka_item(name, raw_value, producent) for name, raw_value in table.items()]
+    items.sort(key=lambda x: x["name"].lower())
+
+    return jsonify({
+        "producent": producent,
+        "items": items,
+        "unitOptions": OBROBKI_UNIT_OPTIONS,
+        "typeOptions": OBROBKI_TYPE_OPTIONS,
+        "groupOptions": [
+            {"value": "1", "label": "Konglomeraty"},
+            {"value": "2", "label": "Dekton"},
+        ],
+        "supportsGroup": producent == "Forma system",
+    })
+
+
+@app.route('/api/obrobki', methods=['POST'])
+def api_obrobki_create():
+    payload = request.get_json(silent=True) or {}
+    producent = (payload.get('producent') or '').strip()
+    name = (payload.get('name') or '').strip()
+    unit = payload.get('unit')
+    price = payload.get('price')
+    calc_type = payload.get('type')
+    group = _normalize_forma_obrobka_group(payload.get('group', FORMA_OBROBKI_GROUP_DEFAULT))
+
+    if producent not in OBROBKI_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+    if not name:
+        return jsonify({"error": "Nazwa obróbki jest wymagana"}), 400
+
+    table = _load_obrobki_table(producent)
+    if name in table:
+        return jsonify({"error": "Obróbka już istnieje"}), 409
+
+    table[name] = _build_raw_obrobka_value(unit, price, calc_type)
+    _save_obrobki_table(producent, table)
+
+    if producent == "Forma system":
+        groups = _load_forma_obrobki_groups()
+        groups[name] = group
+        _save_forma_obrobki_groups(groups)
+
+    return jsonify({"status": "ok", "message": "Obróbka dodana"}), 201
+
+
+@app.route('/api/obrobki/<path:obrobka_name>', methods=['PUT'])
+def api_obrobki_update(obrobka_name):
+    payload = request.get_json(silent=True) or {}
+    producent = (payload.get('producent') or request.args.get('producent') or '').strip()
+    new_name = (payload.get('name') or obrobka_name or '').strip()
+    unit = payload.get('unit')
+    price = payload.get('price')
+    calc_type = payload.get('type')
+    group = _normalize_forma_obrobka_group(payload.get('group', FORMA_OBROBKI_GROUP_DEFAULT))
+
+    if producent not in OBROBKI_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+
+    table = _load_obrobki_table(producent)
+    if obrobka_name not in table:
+        return jsonify({"error": "Nie znaleziono obróbki"}), 404
+    if not new_name:
+        return jsonify({"error": "Nazwa obróbki jest wymagana"}), 400
+    if new_name != obrobka_name and new_name in table:
+        return jsonify({"error": "Obróbka o nowej nazwie już istnieje"}), 409
+
+    raw_value = _build_raw_obrobka_value(unit, price, calc_type)
+    if new_name != obrobka_name:
+        table.pop(obrobka_name)
+    table[new_name] = raw_value
+    _save_obrobki_table(producent, table)
+
+    if producent == "Forma system":
+        groups = _load_forma_obrobki_groups()
+        if obrobka_name in groups:
+            groups.pop(obrobka_name)
+        groups[new_name] = group
+        _save_forma_obrobki_groups(groups)
+
+    return jsonify({"status": "ok", "message": "Obróbka zaktualizowana"})
+
+
+@app.route('/api/obrobki/<path:obrobka_name>', methods=['DELETE'])
+def api_obrobki_delete(obrobka_name):
+    producent = (request.args.get('producent') or '').strip()
+    if producent not in OBROBKI_SCHEMAS:
+        return jsonify({"error": "Nieznany producent"}), 400
+
+    table = _load_obrobki_table(producent)
+    if obrobka_name not in table:
+        return jsonify({"error": "Nie znaleziono obróbki"}), 404
+
+    table.pop(obrobka_name)
+    _save_obrobki_table(producent, table)
+
+    if producent == "Forma system":
+        groups = _load_forma_obrobki_groups()
+        if obrobka_name in groups:
+            groups.pop(obrobka_name)
+            _save_forma_obrobki_groups(groups)
+
+    return jsonify({"status": "ok", "message": "Obróbka usunięta"})
+
+
 @app.route('/admin')
 @login_required
 def admin_index():
@@ -861,6 +1505,20 @@ def admin_index():
             mtime = None
         file_infos.append({'path': f, 'mtime': mtime})
     return render_template('admin.html', files=file_infos)
+
+
+@app.route('/admin/materials')
+@login_required
+def admin_materials():
+    producenci = list(MATERIAL_SCHEMAS.keys())
+    return render_template('admin_materials.html', producenci=producenci)
+
+
+@app.route('/admin/obrobki')
+@login_required
+def admin_obrobki():
+    producenci = list(OBROBKI_SCHEMAS.keys())
+    return render_template('admin_obrobki.html', producenci=producenci)
 
 
 @app.route('/admin/edit', methods=['GET'])
