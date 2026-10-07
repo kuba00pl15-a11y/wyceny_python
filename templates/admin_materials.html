@@ -383,7 +383,7 @@
 
         schema.columns.forEach((col) => {
           const th = document.createElement("th");
-          th.textContent = col.label;
+          th.textContent = schema.priceUnit ? `${col.label} (${schema.priceUnit})` : col.label;
           tr.appendChild(th);
         });
 
@@ -549,7 +549,7 @@
         /* price columns */
         currentSchema.columns.forEach((col) => {
           const td = document.createElement("td");
-          td.dataset.label = col.label;
+          td.dataset.label = currentSchema.priceUnit ? `${col.label} (${currentSchema.priceUnit})` : col.label;
           const input = createPriceInput(item.prices?.[col.key] ?? 0, tr);
           input.dataset.price = col.key;
           td.appendChild(input);

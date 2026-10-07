@@ -159,6 +159,10 @@ def generuj_PDF(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_transport,
          ]
     ]
     for i, produkt in enumerate(zamowienie.lista_produktow):
+        cena_jednostkowa = produkt.cena_jednostkowa()
+        if produkt.producent.nazwa == "Forma system":
+            cena_jednostkowa = f"{cena_jednostkowa:.2f} zł/m2"
+
         data.append([i + 1,
                      produkt.producent.nazwa,
                      produkt.material.replace(" ", "\n"),
@@ -168,7 +172,7 @@ def generuj_PDF(zamowienie, klient, usluga_pmt, usluga_pomiar, usluga_transport,
                      produkt.grubosc,
                      f"{round(produkt.cena_po_rabacie()):.2f}",
                      produkt.rabat,
-                     produkt.cena_jednostkowa()
+                     cena_jednostkowa
                      ])
 
     laczna_cena_produktow = sum([produkt.cena_po_rabacie() for produkt in zamowienie.lista_produktow])

@@ -150,6 +150,14 @@
         ];
 
         const thicknesses = {};
+        const initialMaterialData = {{ material_data | tojson }};
+        if (initialMaterialData && initialMaterialData.materials) {
+            materials = initialMaterialData.materials;
+            Object.assign(thicknesses, initialMaterialData.thicknesses || {});
+            forma_dekton = Object.entries(initialMaterialData.forma_groups || {})
+                .filter(([, group]) => String(group) === "2")
+                .map(([material]) => material);
+        }
 
         let customObrobkaIndex = {{ custom_obrobki|length if custom_obrobki else 0 }};
         // Unique incrementing id for rows to avoid re-using ids after removals
@@ -199,7 +207,7 @@
             if (company === "O rety parapety") return [2.0, 3.0];
             if (company === "Olgran" || company === "Imperial") return [2.0, 3.0];
             if (company === "Stolarz") return [3.0, 4.0, 5.0, 6.0];
-            if (company === "Forma system") return [2.0, 1.2];
+            if (company === "Forma system") return [1.2, 2.0, 3.0];
             return [];
         }
 

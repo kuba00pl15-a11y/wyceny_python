@@ -218,12 +218,43 @@ class Imperial(Producent):
 
 class Formasystem(Producent):
     nazwa="Forma system"
+    aliases_materialow = {
+        "Elegance Eco Nev": "Elegance ECO Nev",
+        "Crystal Absolute White": "Crystal Absolut White",
+        "Ambiente Light terra": "Ambiente Light",
+        "Coral Clay": "Coral Clay Poler",
+        "Linen Cream": "Linen Cream Poler",
+        "Negro Tebas Suede": "Negro Tebas",
+        "Desert Silver Suede": "Desert Silver",
+        "Lime Delight Suede": "Lime Delight",
+        "Belvedere": "Belvedere Poler",
+        "Jadore": "Jadore Poler (Emerald Dream)",
+        "Infinity": "Infinity (Marmi Lava)",
+        "Madreperola": "Madreperola (Madrea Green)",
+        "White Quartzite": "White Quartzite Satyna (Arctic Storm)",
+        "Celeste": "Celeste (Alpine Blue)",
+        "Nero Assoluto Zimbabwe": "Nero Assoluto Poler",
+        "Jura Beige mat": "Jura Beige",
+        "Makrana poler": "Makrana",
+        "Taj Mahal poler": "Taj Mahal",
+    }
+
     def cena_jed(self, d, s, g, typ, material=""):
         try:
             with open('data/tabelka_forma.json', 'r') as file:
                 tabelka_forma = json.load(file)
         except FileNotFoundError:
             raise FileNotFoundError("Plik 'tabelka.json' nie istnieje")
+
+        material = self.aliases_materialow.get(material, material)
+        if material not in tabelka_forma:
+            logging.warning(f"Nieznany materiał Forma system: {material}. Zwracam 0.")
+            return 0
+
+        material_prices = tabelka_forma[material]
+        if isinstance(material_prices, dict):
+            thickness_key = f"{int(round(float(g) * 10))}mm"
+            return _to_float(material_prices.get(thickness_key), 0)
 
         czesc = 0
         kolumna = 0
@@ -245,12 +276,8 @@ class Formasystem(Producent):
             else:
                 break
 
-        if material not in tabelka_forma:
-            logging.warning(f"Nieznany materiał Forma system: {material}. Zwracam 0.")
-            return 0
-
         try:
-            return tabelka_forma[material][czesc][kolumna]
+            return material_prices[czesc][kolumna]
         except (IndexError, TypeError):
             logging.warning(
                 f"Nieprawidłowe dane cennika dla materiału {material} (czesc={czesc}, kolumna={kolumna}). Zwracam 0."
@@ -259,6 +286,14 @@ class Formasystem(Producent):
 
     def cena(self, d, s, g, typ, material=""):
         cena_jednostkowa = self.cena_jed(d, s, g, typ, material)
+        try:
+            with open('data/tabelka_forma.json', 'r') as file:
+                tabelka_forma = json.load(file)
+            material_key = self.aliases_materialow.get(material, material)
+            if isinstance(tabelka_forma.get(material_key), dict):
+                return cena_jednostkowa * self.m2(d, s)
+        except (OSError, json.JSONDecodeError):
+            pass
         return cena_jednostkowa * self.mb(d) * 1.6
 
     @staticmethod
@@ -768,11 +803,14 @@ def dodaj_produkt():
                     except json.JSONDecodeError:
                         print(f"Błąd wczytywania JSON z pliku {plik}")
 
+    material_data = api_materials().get_json()
+
     return render_template(
         "dodaj_produkt.html",
         lista_produktow=zamowienie.lista_produktow,
         obrobki_data=obrobki_data,
         forma_obrobki_groups=forma_obrobki_groups,
+        material_data=material_data,
         custom_obrobki=zamowienie.wlasne_obrobki
     )
     
@@ -888,7 +926,7 @@ def get_editable_files():
 MATERIAL_SCHEMAS = {
     "Forma system": {
         "file": "data/tabelka_forma.json",
-        "thicknesses": [1.2, 2.0],
+        "thicknesses": [1.2, 2.0, 3.0],
         "mode": "forma",
     },
     "Imperial": {
@@ -1114,12 +1152,11 @@ def _save_forma_groups(groups):
 
 
 def _forma_columns():
-    columns = []
-    for idx in range(1, 10):
-        columns.append({"key": f"t12_p{idx}", "label": f"1.2 / P{idx}"})
-    for idx in range(1, 10):
-        columns.append({"key": f"t20_p{idx}", "label": f"2.0 / P{idx}"})
-    return columns
+    return [
+        {"key": "t12", "label": "12 mm"},
+        {"key": "t20", "label": "20 mm"},
+        {"key": "t30", "label": "30 mm"},
+    ]
 
 
 def _material_schema_with_columns(producent):
@@ -1131,6 +1168,7 @@ def _material_schema_with_columns(producent):
             "producent": producent,
             "thicknesses": schema["thicknesses"],
             "mode": schema["mode"],
+            "priceUnit": "zł/m2",
             "columns": _forma_columns(),
             "groupOptions": [
                 {"value": "1", "label": "Konglomeraty"},
@@ -1192,12 +1230,18 @@ def _serialize_material_item(producent, material, raw_value):
     prices = {}
 
     if mode == "forma":
-        part_12 = raw_value[0] if isinstance(raw_value, list) and len(raw_value) > 0 else []
-        part_20 = raw_value[1] if isinstance(raw_value, list) and len(raw_value) > 1 else []
-        for idx in range(9):
-            prices[f"t12_p{idx + 1}"] = _to_float(part_12[idx] if idx < len(part_12) else 0)
-        for idx in range(9):
-            prices[f"t20_p{idx + 1}"] = _to_float(part_20[idx] if idx < len(part_20) else 0)
+        if isinstance(raw_value, dict):
+            prices = {
+                "t12": _to_float(raw_value.get("12mm"), 0),
+                "t20": _to_float(raw_value.get("20mm"), 0),
+                "t30": _to_float(raw_value.get("30mm"), 0),
+            }
+        else:
+            part_12 = raw_value[0] if isinstance(raw_value, list) and len(raw_value) > 0 else []
+            part_20 = raw_value[1] if isinstance(raw_value, list) and len(raw_value) > 1 else []
+            prices["t12"] = _to_float(part_12[0] if part_12 else 0)
+            prices["t20"] = _to_float(part_20[0] if part_20 else 0)
+            prices["t30"] = 0
     elif mode == "4col":
         raw = raw_value if isinstance(raw_value, list) else []
         keys = ["parapet_2_0", "parapet_3_0", "blat_2_0", "blat_3_0"]
@@ -1221,13 +1265,11 @@ def _build_raw_material_value(producent, prices):
     mode = schema["mode"]
 
     if mode == "forma":
-        part_12 = []
-        part_20 = []
-        for idx in range(1, 10):
-            part_12.append(_to_float(prices.get(f"t12_p{idx}"), 0.0))
-        for idx in range(1, 10):
-            part_20.append(_to_float(prices.get(f"t20_p{idx}"), 0.0))
-        return [part_12, part_20]
+        return {
+            "12mm": _to_float(prices.get("t12"), 0.0),
+            "20mm": _to_float(prices.get("t20"), 0.0),
+            "30mm": _to_float(prices.get("t30"), 0.0),
+        }
 
     if mode == "4col":
         keys = ["parapet_2_0", "parapet_3_0", "blat_2_0", "blat_3_0"]
@@ -1255,7 +1297,15 @@ def api_materials():
         for material in names:
             if material not in thickness_map:
                 thickness_map[material] = {}
-            thickness_map[material][producent] = schema["thicknesses"]
+            if producent == "Forma system" and isinstance(table.get(material), dict):
+                thicknesses = [
+                    int(key[:-2]) / 10
+                    for key, price in table[material].items()
+                    if key.endswith("mm") and _to_float(price, 0) > 0
+                ]
+                thickness_map[material][producent] = thicknesses
+            else:
+                thickness_map[material][producent] = schema["thicknesses"]
 
     # Stolarz pozostaje pozycją stałą
     material_map["Stolarz"] = ["Dąb"]
